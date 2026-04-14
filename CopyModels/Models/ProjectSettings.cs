@@ -1,10 +1,8 @@
-﻿using System;
+﻿using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
-using Newtonsoft.Json.Linq;
 
 namespace CopyModels.Core.Models
 {
@@ -113,18 +111,74 @@ namespace CopyModels.Core.Models
                                                         project,
                                                         now));
                 }
-            }    
-            
-            
-            BackupFolder = settings["BackUp Folder"]?.Value<string>();
+            }
 
-            Purge = settings["Purge"]?.Value<bool>() ?? false;
+            // Имя для UI
+            var nameExtension = TargetPath
+                                .Select(t => Path.GetExtension(t).ToUpper())
+                                .Distinct()
+                                .ToList();
+            DisplayName = $"{discipline, -20} | {project, -35} | {name, -35}";
+            if (SourcePath != null)
+            {
+                DisplayName += " | " + Path.GetExtension(SourcePath).ToUpper();
+                DisplayName += " > " + string.Join(" + ", nameExtension);
+            }
+
+            // Опция копирования
+            SelectableCopy = settings["Selectable Copy"]?.Value<bool>() ?? true;
             KeepStructure = settings["Keep Structure"]?.Value<bool>() ?? true;
             DeleteMissed = settings["Delete Missed"]?.Value<bool>() ?? false;
 
-            Transmit = settings["Transmit"]?.Value<bool>();
+            CopyExceptions = ParseStringList(settings["Copy Exceptions"]);
+            PathExceptions = ParseStringList(settings["Path Exceptions"]);
 
-         
+            // Очистка /открытие
+            Purge = settings["Purge"]?.Value<bool>() ?? false;
+            FullOpenMask = ParseStringList(settings["Full Open Mask"]);
+            CloseWorksetsMask = ParseStringList(settings["Close Workset Mask"]);
+
+            // Архив
+            BackupFolder = settings["BackUp Folder"]?.Value<string>();
+            CleanBackup = settings["Clean BackUp"]?.Value<bool>() ?? true;
+
+            // Transmit
+            Transmit = settings["Transmit"]?.Value<bool>();
+            RelativeLinks = settings["Relative Links"]?.Value<bool>() ?? false;
+
+            // IFC
+            IfcWorksetDivisionParameters = ParseStringList(settings["IFC workset division parameters"]);
+            IfcDivision = IfcWorksetDivisionParameters.Count > 0;
+
+            var ifcCoords = settings["IFC shared coordinates file"]?.Value<string>();
+            IfcSharedCoordinatesFiles = string.IsNullOrEmpty(ifcCoords) ? null : ifcCoords;
+
+            IfcSettings = settings["IFC_settings"] is JObject ifcObj
+                                    ?ifcObj.ToObject<Dictionary<string, object>>()
+                                    : new Dictionary<string, object>();
+
+            // NWC
+            NwcAllProperties = settings["NWC all properties"]?.Value<bool>() ?? true;
+            NwcDivideIntoLevels = settings["NWC Divide into Levels"]?.Value<bool>() ?? true;
+            NwcRoom = settings["NWC Room"]?.Value<bool>() ?? false;
+            NwcLinkedFiles = settings["NWC Linked files"]?.Value<bool>() ?? false;
+
+            // Views
+            Views = settings["Views"] as JObject
+                            ?? JObject.Parse(@"{ ""*"": { "".NWC"": { ""navisworks"": """" }, "".IFC"": { ""navisworks"": """" } } }");   
+
+            // Отчеты
+            Recipients = settings["Recipients"]?.Value<string>();
+            HasRecipients = !string.IsNullOrEmpty(Recipients);
+            ChangeExcelReport = settings["Change excel report"]?.Value<string>();
+
+            // Замена имен
+            ReplaceName = settings["Replace name"] is JObject rn
+                            ? rn.ToObject<Dictionary<string, string>>()
+                            : null;
+
+            if (Purge)
+                DisplayName += " + purge";                     
         }
 
         //
@@ -153,7 +207,5 @@ namespace CopyModels.Core.Models
                 return arr.Select(x => x.Value<string>()).Where(x => x != null).ToList();
             return new List<string>();
         }
-
-
     }
 }
