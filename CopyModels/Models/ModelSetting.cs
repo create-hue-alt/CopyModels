@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace CopyModels.Models
+namespace CopyModels.Core.Models
 {
-    internal class ModelSetting
+    public class ModelSetting
     {
         // Источник
         public string SourcePath { get; }
@@ -17,7 +16,7 @@ namespace CopyModels.Models
         /// Список строк формата "path\to\file.ext" или "path\to\file.ext>viewName".
         /// Null означает, то что модели нет в источнике (exceed/ orphan в цели).
         /// </summary>
-        public List<string> TargetPaths { get; }
+        public List<string> Targets { get; }
 
         // Флфги состояния
         ///<summary>Модель в цеди устарела или отсутствует. </summary>
@@ -47,7 +46,90 @@ namespace CopyModels.Models
         ///   Должен вернуть Unix-время (seconds) или null если файл не найден.
         /// </param>
         
+        public ModelSetting (string sourcePath,
+                             List<string> targets,
+                             Func<string, double?> getModelDate)
+        {
+            SourcePath = sourcePath;
+            SourceModelDate = getModelDate(sourcePath);
+            IsExceed = targets == null;
 
+            if (!IsExceed)
+            {
+                Targets = targets;
+                EvaluateActuality(getModelDate);
+            }
+            else
+            {
+                Targets = new List<string>();
+            }
+        }
 
+        //
+        // Проверка актуальности
+        //
+
+        private void EvaluateActuality(Func<string, double?> getModelDate)
+        {
+            foreach (var targetRaw in Targets)
+            {
+                var target = SplitTarget(targetRaw).path;
+                var ext = Path.GetExtension(target).ToLower().TrimStart('.');
+                var targetDate = getModelDate(target);
+                var sourceDateMinus = (SourceModelDate ?? 0) - 60; // 1 минута допуск, как в Python
+
+                if (targetDate == null || targetDate <= sourceDateMinus)
+                {
+                    IsNotActual = true;
+
+                    var flagKey = targetDate == null
+                        ? $"{ext}_is_missed"
+                        : $"{ext}_not_actual";
+
+                    StatusFlags[flagKey] = true;
+                }
+            }
+        }
+
+        //
+        // Нужно ли открывать модель в Revit
+        //
+
+        /// <summary>
+        /// Модель нужно открыть в Revit если:
+        /// - расширение источника и хотя бы в одной цели не совпадают (конвертация);
+        /// - источник на Revit Server (RSN);
+        /// - хотя бы одна цель на Revit Server.
+        /// </summary>
+        public bool IsOpenRequired()
+        {
+            if (IsExceed) return false;
+
+            var srcExt = Path.GetExtension(SourcePath).ToUpper();
+            var srcIsRsn = SourcePath.StartsWith("RSN", StringComparison.OrdinalIgnoreCase);
+            var hasRsnTgt = Targets.Any(t => SplitTarget(t).path.StartsWith("RSN", StringComparison.OrdinalIgnoreCase));
+            var extMismatch = Targets.Any(t =>
+                !Path.GetExtension(SplitTarget(t).path).ToUpper().Equals(srcExt, StringComparison.OrdinalIgnoreCase));
+
+            return extMismatch || srcIsRsn || hasRsnTgt;
+        }
+
+        //
+        // Вспомогательный метод
+        //
+
+        /// <summary>
+        /// Разбивает строку формата "путь>имяВида" на составляющие.
+        /// Если символ '>' нет - view = "navisworks" по умолчанию.
+        /// </summary>
+        public static (string path, string view) SplitTarget(string raw)
+        {
+            var idx= raw.IndexOf('>');
+            return idx < 0
+                ? (raw, "navisworks")
+                : (raw.Substring(0, idx), raw.Substring(idx + 1));
+        }
+
+        public override string ToString() => DisplayName;
     }
 }
