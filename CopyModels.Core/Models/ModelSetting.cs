@@ -16,14 +16,14 @@ namespace CopyModels.Core.Models
         /// Список строк формата "path\to\file.ext" или "path\to\file.ext>viewName".
         /// Null означает, то что модели нет в источнике (exceed/ orphan в цели).
         /// </summary>
-        public List<string> Targets { get; }
+        public List<string> Targets { get; private set; }
 
-        // Флфги состояния
-        ///<summary>Модель в цеди устарела или отсутствует. </summary>
+        // Флаги состояния
+        ///<summary>Модель в цели устарела или отсутствует. </summary>
         public bool IsNotActual { get; private set; }
 
         ///<summary>Модель есть в цели, но отсутствует в источнике (orphan).</summary>
-        public bool IsExceed {  get; }
+        public bool IsExceed {  get; private set; }
 
         ///<summary>Флаги отсутствия/устаревания по расширению. Ключ: "rvt_is_missed" и т.п.</summary>
         public Dictionary<string, bool> StatusFlags { get; } = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
@@ -71,12 +71,18 @@ namespace CopyModels.Core.Models
 
         private void EvaluateActuality(Func<string, double?> getModelDate)
         {
+            if(SourceModelDate == null)
+            {
+                IsNotActual = true;
+                return;
+            }
+
             foreach (var targetRaw in Targets)
             {
                 var target = SplitTarget(targetRaw).path;
                 var ext = Path.GetExtension(target).ToLower().TrimStart('.');
                 var targetDate = getModelDate(target);
-                var sourceDateMinus = (SourceModelDate ?? 0) - 60; // 1 минута допуск, как в Python
+                var sourceDateMinus = SourceModelDate - 60; // 1 минута допуск, как в Python
 
                 if (targetDate == null || targetDate <= sourceDateMinus)
                 {
