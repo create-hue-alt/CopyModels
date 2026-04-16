@@ -52,11 +52,5 @@
     <Compile Include="Class1.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\CopyModels\CopyModels.Core.csproj">
-      <Project>{ade89861-5eb7-4e43-a4b5-5b15d1787bf7}</Project>
-      <Name>CopyModels.Core</Name>
-    </ProjectReference>
-  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

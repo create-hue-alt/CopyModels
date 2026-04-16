@@ -52,7 +52,7 @@ CopyModels.sln
 
 ### Core/Models
 - [x] `ProjectSettings.cs` — поля описаны, конструктор в процессе
-- [ ] `ModelSetting.cs`
+- [x] `ModelSetting.cs`
 
 ### Core/Settings
 - [ ] `SettingsReader.cs` — чтение JSON конфигов
