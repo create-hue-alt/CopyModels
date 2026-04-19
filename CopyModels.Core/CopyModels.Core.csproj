@@ -48,6 +48,7 @@
     <Compile Include="Models\ModelSetting.cs" />
     <Compile Include="Models\ProjectSettings.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Settings\SettingsReader.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

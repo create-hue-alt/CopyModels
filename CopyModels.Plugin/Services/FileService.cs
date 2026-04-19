@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace CopyModels.Plugin
+namespace CopyModels.Plugin.Services
 {
-    public class Class1
+    internal class FileService
     {
     }
 }
