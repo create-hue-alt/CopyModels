@@ -148,6 +148,21 @@ CopyModels.sln
 
 ---
 
+## Сессия 3 
+
+**Написанный код:**
+- Полностью написаны файлы `ProjectSettings`, `ModelSetting`
+
+**Следующий шаг:**
+- Теперь переходим к следующему файлу: SettingsReader.cs в Core/Settings/.
+Этот класс должен:
+
+Читать JSON файл конфига
+Парсить структуру: дисциплины → проекты → задания
+Создавать список ProjectSettings объектов
+
+---
+
 ## Вопросы и решения
 
 | Вопрос | Решение |
@@ -158,6 +173,9 @@ CopyModels.sln
 | ModelService в Core или Plugin? | Plugin — он требует открытый Revit, нарушение границы в первой версии было ошибкой |
 | Выравнивание колонками в VS? | Расширение Align Assignments, но не критично |
 | Codeium конфликт с VS? | Отключить `Tools → Options → IntelliCode → C# whole line completions` |
+
+
+
 
 ---
 

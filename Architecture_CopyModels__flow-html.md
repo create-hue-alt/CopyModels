@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Архитектура CopyModels</title>
+    <style>
+        :root {
+            --gap: 12px;
+            --font-sans: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --border-radius-md: 6px;
+            --color-border-primary: #333;
+            --color-border-secondary: #ddd;
+            --color-border-tertiary: #aaa;
+            --color-background-secondary: #f5f5f5;
+            --color-text-primary: #111;
+            --color-text-secondary: #555;
+            --color-text-tertiary: #888;
+            --t: #555; /* Цвет линий и стрелок */
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            padding: 20px;
+        }
+
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            border: 0;
+        }
+
+        h2:not(.sr-only) {
+            margin-bottom: 20px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin: 0 0 20px;
+        }
+
+        .tab {
+            padding: 6px 16px;
+            border-radius: var(--border-radius-md);
+            border: 1px solid var(--color-border-secondary);
+            background: #fff;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--color-text-secondary);
+            font-family: var(--font-sans);
+            transition: all .15s;
+        }
+
+            .tab:hover {
+                background: #f9f9f9;
+            }
+
+            .tab.active {
+                background: var(--color-background-secondary);
+                color: var(--color-text-primary);
+                font-weight: 500;
+                border-color: var(--color-border-primary);
+            }
+
+        .panel {
+            display: none;
+        }
+
+            .panel.active {
+                display: block;
+            }
+
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 20px;
+            margin-bottom: 16px;
+            font-size: 12px;
+            color: var(--color-text-secondary);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        /* Добавленные стили для SVG */
+        .th {
+            font-weight: 600;
+            font-size: 13px;
+            fill: var(--color-text-primary);
+            font-family: var(--font-sans);
+        }
+
+        .ts {
+            font-size: 11.5px;
+            fill: var(--color-text-secondary);
+            font-family: var(--font-sans);
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+            .node rect {
+                transition: fill 0.2s;
+            }
+            /* Удалили дефолтную заливку white */
+            .node:hover rect {
+                fill-opacity: 0.8;
+            }
+        /* Подсветка при наведении через прозрачность */
+
+        /* Цвета блоков и текста */
+        .c-gray rect {
+            fill: #f0f0f0;
+            stroke: #888888;
+        }
+        /* Светло-серый фон */
+        .c-gray .th, .c-gray .ts {
+            fill: var(--color-text-primary);
+        }
+        /* Черный текст */
+
+        .c-red rect {
+            fill: #E24B4A;
+            stroke: #E24B4A;
+        }
+
+        .c-red .th, .c-red .ts {
+            fill: #ffffff;
+        }
+        /* Белый текст */
+
+        .c-purple rect {
+            fill: #7F77DD;
+            stroke: #7F77DD;
+        }
+
+        .c-purple .th, .c-purple .ts {
+            fill: #ffffff;
+        }
+        /* Белый текст */
+
+        .c-teal rect {
+            fill: #1D9E75;
+            stroke: #1D9E75;
+        }
+
+        .c-teal .th, .c-teal .ts {
+            fill: #ffffff;
+        }
+        /* Белый текст */
+
+        .c-amber rect {
+            fill: #FFDAB9;
+            stroke: #BA7517;
+        }
+        /* Персиковый фон */
+        .c-amber .th, .c-amber .ts {
+            fill: var(--color-text-primary);
+        }
+        /* Черный текст */
+
+        .c-blue rect {
+            fill: #3B8BD4;
+            stroke: #3B8BD4;
+        }
+
+        .c-blue .th, .c-blue .ts {
+            fill: #ffffff;
+        }
+        /* Белый текст */
+
+        /* Базовые линии в SVG */
+        svg {
+            max-width: 800px;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+    <h2 class="sr-only">Архитектура и поток выполнения плагина CopyModels — Python и C# версии</h2>
+
+    <div class="tabs">
+        <button class="tab active" onclick="show('flow')">Поток выполнения</button>
+        <button class="tab" onclick="show('arch')">Архитектура C#</button>
+        <button class="tab" onclick="show('map')">Маппинг файлов</button>
+    </div>
+
+    <div id="panel-flow" class="panel active">
+        <div class="legend">
+            <span class="legend-item"><span class="dot" style="background:#7F77DD"></span> Настройки</span>
+            <span class="legend-item"><span class="dot" style="background:#1D9E75"></span> UI / выбор</span>
+            <span class="legend-item"><span class="dot" style="background:#3B8BD4"></span> Обработка модели</span>
+            <span class="legend-item"><span class="dot" style="background:#BA7517"></span> Операции с файлами</span>
+            <span class="legend-item"><span class="dot" style="background:#E24B4A"></span> Ошибки / выход</span>
+        </div>
+        <svg width="100%" viewBox="0 0 680 1060" role="img">
+            <title>Поток выполнения CopyModels</title>
+            <desc>Блок-схема от запуска плагина до вывода отчёта</desc>
+            <defs>
+                <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M2 1L8 5L2 9" fill="none" stroke="var(--t)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                </marker>
+            </defs>
+
+            <g class="node c-gray" onclick="sendPrompt('Что происходит при запуске CopyModels плагина?')">
+                <rect x="240" y="10" width="200" height="40" rx="20" stroke-width="1" />
+                <text class="th" x="340" y="30" text-anchor="middle" dominant-baseline="central">Запуск плагина в Revit</text>
+            </g>
+            <line x1="340" y1="50" x2="340" y2="75" class="arr" marker-end="url(#arr)" stroke="var(--t)" />
+
+            <g class="node c-red" onclick="sendPrompt('Почему плагин требует английский Revit?')">
+                <rect x="205" y="75" width="270" height="44" rx="6" stroke-width="1" />
+                <text class="th" x="340" y="90" text-anchor="middle" dominant-baseline="central">Revit на английском?</text>
+                <text class="ts" x="340" y="108" text-anchor="middle" dominant-baseline="central">проверка Application.Language</text>
+            </g>
+            <text class="ts" x="482" y="100" dominant-baseline="central">нет → выход</text>
+            <line x1="475" y1="97" x2="461" y2="97" stroke="var(--t)" stroke-width="1" />
+            <line x1="340" y1="119" x2="340" y2="144" class="arr" marker-end="url(#arr)" stroke="var(--t)" />
+            <text class="ts" x="347" y="135">да</text>
+
+            <g class="node c-purple" onclick="sendPrompt('Как работает выбор дисциплины get_config?')">
+                <rect x="195" y="144" width="290" height="56" rx="6" stroke-width="1" />
+                <text class="th" x="340" y="162" text-anchor="middle" dominant-baseline="central">Выбор дисциплины</text>
+                <text class="ts" x="340" y="181" text-anchor="middle" dominant-baseline="central">get_config() → читает .json из папки Revit версии</text>
+            </g>
+            <line x1="340" y1="200" x2="340" y2="225" class="arr" marker-end="url(#arr)" stroke="var(--t)" />
+
+            <g class="node c-purple" onclick="sendPrompt('Как читаются JSON настройки в settings_classes.py?')">
+                <rect x="195" y="225" width="290" height="56" rx="6" stroke-width="1" />
+                <text class="th" x="340" y="243" text-anchor="middle" dominant-baseline="central">Чтение JSON конфигов</text>
+                <text class="ts" x="340" y="262" text-anchor="middle" dominant-baseline="central">read_setting_file() → список ProjectSettings</text>
+            </g>
+            <line x1="340" y1="281" x2="340" y2="306" class="arr" marker-end="url(#arr)" stroke="var(--t)" />
+
+            <g class="node c-teal" onclick="sendPrompt('Как пользователь выбирает задания в UI?')">
+                <rect x="195" y="306" width="290" height="56" rx="6" stroke-width="1" />
+                <text class="th" x="340" y="324" text-anchor="middle" dominant-baseline="central">UI: выбор заданий</text>
+                <text class="ts" x="340" y="343" text-anchor="middle" dominant-baseline="central">SelectFromList → пользователь ставит галочки</text>
+            </g>
+            <line x1="340" y1="362" x2="340" y2="387" class="arr" marker-end="url(#arr)" stroke="var(--t)" />
+
+            <rect x="30" y="387" width="620" height="540" rx="10" fill="none" stroke="var(--color-border-tertiary)" stroke-width="1" stroke-dasharray="6 3" />
+            <text class="ts" x="48" y="404" style="fill:var(--color-text-tertiary)">для каждого задания</text>
+
+            <g class="node c-amber" onclick="sendPrompt('Что делает map_drive в serverTools?')">
+                <rect x="200" y="408" width="280" height="44" rx="6" stroke-width="1" />
+                <text class="th" x="340" y="426" text-anchor="middle" dominant-baseline="central">Подключение сетевого диска</text>
+                <text class="ts" x="340" y="444" text-anchor="middle" dominant-baseline="central">map_drive() если задан MapDrive</text>
+            </g>
+            <line x1="340" y1="452" x2="340" y2="477" class="arr" marker-end="url(#arr)" stroke="var(--t)" />
+
+            <g class="node c-teal" onclick="sendPrompt('Как get_models_settings определяет список моделей?')">
+                <rect x="200" y="477" width="280" height="56" rx="6" stroke-width="1" />
+                <text class="th" x="340" y="495" text-anchor="middle" dominant-baseline="central">UI: выбор моделей</text>
+                <text class="ts" x="340" y="514" text-anchor="middle" dominant-baseline="central">get_models_settings() → ModelSetting[ ]</text>
+            </g>
+            <line x1="340" y1="533" x2="340" y2="558" class="arr" marker-end="url(#arr)" stroke="var(--t)" />
+
+            <rect x="50" y="558" width="580" height="280" rx="8" fill="none" stroke="var(--color-border-tertiary)" stroke-width="1" stroke-dasharray="4 3" />
+            <text class="ts" x="68" y="575" style="fill:var(--color-text-tertiary)">для каждой модели</text>
+
+            <g class="node c-red" onclick="sendPrompt('Что такое is_exceed в ModelSetting?')">
+                <rect x="215" y="578" width="250" height="44" rx="6" stroke-width="1" />
+                <text class="th" x="340" y="596" text-anchor="middle" dominant-baseline="central">Лишняя модель?</text>
+                <text class="ts" x="340" y="614" text-anchor="middle" dominant-baseline="central">is_exceed → нет в источнике</text>
+            </g>
+            <text class="ts" x="472" y="601" dominant-baseline="central">да → удалить / архив</text>
+            <line x1="465" y1="600" x2="455" y2="600" stroke="var(--t)" stroke-width="1" />
+            <line x1="340" y1="622" x2="340" y2="647" class="arr" marker-end="url(#arr)" stroke="var(--t)" />
+            <text class="ts" x="347" y="638">нет</text>
+
+            <g class="node c-blue" onclick="sendPrompt('Когда модель нужно открывать в Revit?')">
+                <rect x="190" y="647" width="300" height="56" rx="6" stroke-width="1" />
+                <text class="th" x="340" y="665" text-anchor="middle" dominant-baseline="central">Нужно открыть в Revit?</text>
+                <text class="ts" x="340" y="683" text-anchor="middle" dominant-baseline="central">purge / экспорт / RSN / смена формата</text>
+            </g>
+
+            <text class="ts" x="152" y="680" text-anchor="middle" dominant-baseline="central">нет</text>
+            <line x1="190" y1="675" x2="140" y2="675" stroke="var(--t)" stroke-width="1" marker-end="url(#arr)" />
+            <g class="node c-amber" onclick="sendPrompt('Как работает копирование файлов без открытия?')">
+                <rect x="45" y="700" width="180" height="44" rx="6" stroke-width="1" />
+                <text class="th" x="135" y="718" text-anchor="middle" dominant-baseline="central">copy_model()</text>
+                <text class="ts" x="135" y="736" text-anchor="middle" dominant-baseline="central">RSN→RSN / RSN→FS / FS→FS</text>
+            </g>
+
+            <line x1="340" y1="703" x2="340" y2="728" class="arr" marker-end="url(#arr)" stroke="var(--t)" />
+            <text class="ts" x="347" y="720">да</text>
+            <g class="node c-blue" onclick="sendPrompt('Что делает open_model_with_detach?')">
+                <rect x="210" y="728" width="260" height="56" rx="6" stroke-width="1" />
+                <text class="th" x="340" y="746" text-anchor="middle" dominant-baseline="central">Открыть модель (detach)</text>
+                <text class="ts" x="340" y="765" text-anchor="middle" dominant-baseline="central">open_model_with_detach / open_ifc</text>
+            </g>
+            <line x1="340" y1="784" x2="340" y2="809" class="arr" marker-end="url(#arr)" stroke="var(--t)" />
+            <g class="node c-blue" onclick="sendPrompt('Как работает purge через PerformanceAdviser?')">
+                <rect x="210" y="809" width="260" height="44" rx="6" stroke-width="1" />
+                <text class="th" x="340" y="827" text-anchor="middle" dominant-baseline="central">Purge (если нужно)</text>
+                <text class="ts" x="340" y="845" text-anchor="middle" dominant-baseline="central">clean_revit_file() → удаляет ненужные эл.</text>
+            </g>
+
+            <line x1="340" y1="853" x2="340" y2="878" class="arr" marker-end="url(#arr)" stroke="var(--t)" />
+
+            <rect x="160" y="878" width="360" height="32" rx="4" fill="none" stroke="var(--color-border-tertiary)" stroke-width="1" />
+            <text class="ts" x="340" y="894" text-anchor="middle" dominant-baseline="central">save_rvt / export_rvt / transmit_model → закрыть</text>
+
+            <line x1="340" y1="940" x2="340" y2="965" class="arr" marker-end="url(#arr)" stroke="var(--t)" />
+            <g class="node c-gray" onclick="sendPrompt('Какой отчёт формирует плагин?')">
+                <rect x="195" y="965" width="290" height="56" rx="6" stroke-width="1" />
+                <text class="th" x="340" y="983" text-anchor="middle" dominant-baseline="central">Отчёт и завершение</text>
+                <text class="ts" x="340" y="1002" text-anchor="middle" dominant-baseline="central">таблица в PyRevit output + email-ссылка</text>
+            </g>
+
+        </svg>
+    </div>
+
+    <div id="panel-arch" class="panel">
+        <div class="legend">
+            <span class="legend-item"><span class="dot" style="background:#7F77DD"></span> Core (без Revit API)</span>
+            <span class="legend-item"><span class="dot" style="background:#3B8BD4"></span> Plugin (требует RevitAPI.dll)</span>
+            <span class="legend-item"><span class="dot" style="background:#1D9E75"></span> UI — этап 2</span>
+        </div>
+        <svg width="100%" viewBox="0 0 680 600" role="img">
+            <title>Архитектура C# решения CopyModels</title>
+            <desc>Структура трёх проектов Solution: Core, Plugin, UI</desc>
+            <defs>
+                <marker id="arr2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M2 1L8 5L2 9" fill="none" stroke="var(--t)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                </marker>
+            </defs>
+
+            <rect x="20" y="14" width="640" height="570" rx="14" fill="none" stroke="var(--color-border-secondary)" stroke-width="1" stroke-dasharray="8 4" />
+            <text class="ts" x="36" y="32" style="fill:var(--color-text-tertiary)">CopyModels.sln</text>
+
+            <g class="c-purple node">
+                <rect x="40" y="44" width="280" height="230" rx="10" stroke-width="1" />
+                <text class="th" x="180" y="66" text-anchor="middle" dominant-baseline="central">CopyModels.Core</text>
+                <text class="ts" x="180" y="82" text-anchor="middle" dominant-baseline="central">Компилируется без RevitAPI.dll</text>
+            </g>
+
+            <g class="node c-purple" onclick="sendPrompt('Что делает ProjectSettings.cs?')">
+                <rect x="58" y="96" width="244" height="52" rx="6" stroke-width="1" />
+                <text class="th" x="180" y="114" text-anchor="middle" dominant-baseline="central">Models/ProjectSettings.cs</text>
+                <text class="ts" x="180" y="132" text-anchor="middle" dominant-baseline="central">поля задания, JSON парсинг, плейсхолдеры</text>
+            </g>
+            <g class="node c-purple" onclick="sendPrompt('Что делает ModelSetting.cs?')">
+                <rect x="58" y="158" width="244" height="52" rx="6" stroke-width="1" />
+                <text class="th" x="180" y="176" text-anchor="middle" dominant-baseline="central">Models/ModelSetting.cs</text>
+                <text class="ts" x="180" y="194" text-anchor="middle" dominant-baseline="central">поля модели, is_exceed, is_not_actual</text>
+            </g>
+            <g class="node c-purple" onclick="sendPrompt('Что делает SettingsReader.cs?')">
+                <rect x="58" y="220" width="244" height="44" rx="6" stroke-width="1" />
+                <text class="th" x="180" y="238" text-anchor="middle" dominant-baseline="central">Settings/SettingsReader.cs</text>
+                <text class="ts" x="180" y="256" text-anchor="middle" dominant-baseline="central">читает JSON, создаёт ProjectSettings</text>
+            </g>
+
+            <g class="c-blue node">
+                <rect x="360" y="44" width="280" height="300" rx="10" stroke-width="1" />
+                <text class="th" x="500" y="66" text-anchor="middle" dominant-baseline="central">CopyModels.Plugin</text>
+                <text class="ts" x="500" y="82" text-anchor="middle" dominant-baseline="central">Требует RevitAPI.dll</text>
+            </g>
+
+            <g class="node c-blue" onclick="sendPrompt('Что делает FileService.cs?')">
+                <rect x="378" y="96" width="244" height="44" rx="6" stroke-width="1" />
+                <text class="th" x="500" y="114" text-anchor="middle" dominant-baseline="central">Services/FileService.cs</text>
+                <text class="ts" x="500" y="132" text-anchor="middle" dominant-baseline="central">копирование, архив, маппинг диска</text>
+            </g>
+            <g class="node c-blue" onclick="sendPrompt('Что делает RevitServerService.cs?')">
+                <rect x="378" y="150" width="244" height="44" rx="6" stroke-width="1" />
+                <text class="th" x="500" y="168" text-anchor="middle" dominant-baseline="central">Services/RevitServerService.cs</text>
+                <text class="ts" x="500" y="186" text-anchor="middle" dominant-baseline="central">HTTP к Revit Server REST API</text>
+            </g>
+            <g class="node c-blue" onclick="sendPrompt('Что делает ModelService.cs?')">
+                <rect x="378" y="204" width="244" height="44" rx="6" stroke-width="1" />
+                <text class="th" x="500" y="222" text-anchor="middle" dominant-baseline="central">Services/ModelService.cs</text>
+                <text class="ts" x="500" y="240" text-anchor="middle" dominant-baseline="central">открытие, purge, экспорт, transmit</text>
+            </g>
+            <g class="node c-blue" onclick="sendPrompt('Что делает EventService.cs?')">
+                <rect x="378" y="258" width="244" height="44" rx="6" stroke-width="1" />
+                <text class="th" x="500" y="276" text-anchor="middle" dominant-baseline="central">Services/EventService.cs</text>
+                <text class="ts" x="500" y="294" text-anchor="middle" dominant-baseline="central">автоответы на диалоги Revit</text>
+            </g>
+            <g class="node c-blue" onclick="sendPrompt('Что делает CopyModelsCommand.cs?')">
+                <rect x="378" y="314" width="244" height="20" rx="4" stroke-width="1" />
+                <text class="th" x="500" y="324" text-anchor="middle" dominant-baseline="central">CopyModelsCommand.cs — IExternalCommand</text>
+            </g>
+
+            <g class="c-teal node">
+                <rect x="40" y="296" width="280" height="120" rx="10" stroke-width="1" stroke-dasharray="4 3" />
+                <text class="th" x="180" y="318" text-anchor="middle" dominant-baseline="central">CopyModels.UI  — этап 2</text>
+                <text class="ts" x="180" y="334" text-anchor="middle" dominant-baseline="central">WPF + MVVM</text>
+            </g>
+            <g class="node c-teal" onclick="sendPrompt('Как будет работать WPF интерфейс?')">
+                <rect x="58" y="344" width="110" height="44" rx="6" stroke-width="1" />
+                <text class="th" x="113" y="362" text-anchor="middle" dominant-baseline="central">MainWindow.xaml</text>
+                <text class="ts" x="113" y="380" text-anchor="middle" dominant-baseline="central">галочки задания/модели</text>
+            </g>
+            <g class="node c-teal" onclick="sendPrompt('Как работает паттерн MVVM в C#?')">
+                <rect x="192" y="344" width="110" height="44" rx="6" stroke-width="1" />
+                <text class="th" x="247" y="362" text-anchor="middle" dominant-baseline="central">MainViewModel.cs</text>
+                <text class="ts" x="247" y="380" text-anchor="middle" dominant-baseline="central">команды, привязки</text>
+            </g>
+
+            <line x1="320" y1="160" x2="358" y2="160" stroke="#7F77DD" stroke-width="1" marker-end="url(#arr2)" />
+            <text class="ts" x="339" y="153" text-anchor="middle">ссылка</text>
+            <line x1="180" y1="296" x2="360" y2="296" stroke="#1D9E75" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arr2)" />
+            <text class="ts" x="270" y="289" text-anchor="middle">этап 2</text>
+
+            <g class="c-amber node">
+                <rect x="200" y="448" width="280" height="54" rx="8" stroke-width="1" />
+                <text class="th" x="340" y="466" text-anchor="middle" dominant-baseline="central">*.json конфиги</text>
+                <text class="ts" x="340" y="484" text-anchor="middle" dominant-baseline="central">формат не меняется — читаем те же файлы</text>
+            </g>
+            <line x1="180" y1="448" x2="240" y2="470" stroke="var(--t)" stroke-width="1" stroke-dasharray="3 3" marker-end="url(#arr2)" />
+            <line x1="500" y1="448" x2="440" y2="470" stroke="var(--t)" stroke-width="1" stroke-dasharray="3 3" marker-end="url(#arr2)" />
+
+            <g class="node c-gray" onclick="sendPrompt('Как устроен JSON конфиг для CopyModels?')">
+                <rect x="200" y="524" width="280" height="44" rx="6" stroke-width="1" />
+                <text class="th" x="340" y="542" text-anchor="middle" dominant-baseline="central">2022/ALL.json, 2023/All.json …</text>
+                <text class="ts" x="340" y="560" text-anchor="middle" dominant-baseline="central">Project → Setting → {Source, Target, Purge…}</text>
+            </g>
+            <line x1="340" y1="524" x2="340" y2="502" stroke="var(--t)" stroke-width="1" marker-end="url(#arr2)" />
+
+        </svg>
+    </div>
+
+    <div id="panel-map" class="panel">
+        <svg width="100%" viewBox="0 0 680 520" role="img">
+            <title>Маппинг файлов Python → C#</title>
+            <desc>Таблица соответствия файлов Python версии и C# версии</desc>
+            <defs>
+                <marker id="arr3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M2 1L8 5L2 9" fill="none" stroke="var(--t)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                </marker>
+            </defs>
+
+            <rect x="20" y="14" width="290" height="32" rx="6" fill="none" stroke="var(--color-border-secondary)" stroke-width="1" />
+            <text class="th" x="165" y="30" text-anchor="middle" dominant-baseline="central">Python (PyRevit)</text>
+            <rect x="370" y="14" width="290" height="32" rx="6" fill="none" stroke="var(--color-border-secondary)" stroke-width="1" />
+            <text class="th" x="515" y="30" text-anchor="middle" dominant-baseline="central">C# (CopyModels)</text>
+
+            <g class="node c-purple" onclick="sendPrompt('Как settings_classes.py соответствует C# классам?')">
+                <rect x="20" y="60" width="290" height="44" rx="6" stroke-width="1" />
+                <text class="th" x="165" y="78" text-anchor="middle" dominant-baseline="central">settings_classes.py</text>
+                <text class="ts" x="165" y="96" text-anchor="middle" dominant-baseline="central">ProjectSettings + ModelSetting</text>
+            </g>
+            <line x1="310" y1="82" x2="368" y2="82" stroke="#7F77DD" stroke-width="1" marker-end="url(#arr3)" />
+            <g class="node c-purple" onclick="sendPrompt('Что содержит Core/Models в C#?')">
+                <rect x="370" y="60" width="290" height="44" rx="6" stroke-width="1" />
+                <text class="th" x="515" y="78" text-anchor="middle" dominant-baseline="central">Core/Models/ProjectSettings.cs</text>
+                <text class="ts" x="515" y="96" text-anchor="middle" dominant-baseline="central">+ Core/Models/ModelSetting.cs</text>
+            </g>
+
+            <g class="node c-purple" onclick="sendPrompt('Как читаются JSON файлы в Python версии?')">
+                <rect x="20" y="118" width="290" height="44" rx="6" stroke-width="1" />
+                <text class="th" x="165" y="136" text-anchor="middle" dominant-baseline="central">Copy_Models_script.py</text>
+                <text class="ts" x="165" y="154" text-anchor="middle" dominant-baseline="central">read_setting_file()</text>
+            </g>
+            <line x1="310" y1="140" x2="368" y2="140" stroke="#7F77DD" stroke-width="1" marker-end="url(#arr3)" />
+            <g class="node c-purple" onclick="sendPrompt('Что делает SettingsReader.cs?')">
+                <rect x="370" y="118" width="290" height="44" rx="6" stroke-width="1" />
+                <text class="th" x="515" y="136" text-anchor="middle" dominant-baseline="central">Core/Settings/SettingsReader.cs</text>
+                <text class="ts" x="515" y="154" text-anchor="middle" dominant-baseline="central">читает JSON, создаёт ProjectSettings</text>
+            </g>
+
+            <g class="node c-amber" onclick="sendPrompt('Что делает serverTools.py?')">
+                <rect x="20" y="176" width="290" height="44" rx="6" stroke-width="1" />
+                <text class="th" x="165" y="194" text-anchor="middle" dominant-baseline="central">serverTools.py (файловая часть)</text>
+                <text class="ts" x="165" y="212" text-anchor="middle" dominant-baseline="central">copy_model, archive_model, map_drive</text>
+            </g>
+            <line x1="310" y1="198" x2="368" y2="198" stroke="#BA7517" stroke-width="1" marker-end="url(#arr3)" />
+            <g class="node c-amber" onclick="sendPrompt('Что делает FileService.cs?')">
+                <rect x="370" y="176" width="290" height="44" rx="6" stroke-width="1" />
+                <text class="th" x="515" y="194" text-anchor="middle" dominant-baseline="central">Plugin/Services/FileService.cs</text>
+                <text class="ts" x="515" y="212" text-anchor="middle" dominant-baseline="central">без Revit API, но в Plugin проекте</text>
+            </g>
+
+            <g class="node c-blue" onclick="sendPrompt('Как serverTools взаимодействует с Revit Server?')">
+                <rect x="20" y="234" width="290" height="44" rx="6" stroke-width="1" />
+                <text class="th" x="165" y="252" text-anchor="middle" dominant-baseline="central">serverTools.py (RSN часть)</text>
+                <text class="ts" x="165" y="270" text-anchor="middle" dominant-baseline="central">revit_server_content, revit_server_copy</text>
+            </g>
+            <line x1="310" y1="256" x2="368" y2="256" stroke="#3B8BD4" stroke-width="1" marker-end="url(#arr3)" />
+            <g class="node c-blue" onclick="sendPrompt('Что делает RevitServerService?')">
+                <rect x="370" y="234" width="290" height="44" rx="6" stroke-width="1" />
+                <text class="th" x="515" y="252" text-anchor="middle" dominant-baseline="central">Plugin/Services/RevitServerService.cs</text>
+                <text class="ts" x="515" y="270" text-anchor="middle" dominant-baseline="central">HTTP запросы к RSN REST API</text>
+            </g>
+
+            <g class="node c-blue" onclick="sendPrompt('Что делает modelTools.py?')">
+                <rect x="20" y="292" width="290" height="44" rx="6" stroke-width="1" />
+                <text class="th" x="165" y="310" text-anchor="middle" dominant-baseline="central">modelTools.py</text>
+                <text class="ts" x="165" y="328" text-anchor="middle" dominant-baseline="central">open_model, purge, export, transmit</text>
+            </g>
+            <line x1="310" y1="314" x2="368" y2="314" stroke="#3B8BD4" stroke-width="1" marker-end="url(#arr3)" />
+            <g class="node c-blue" onclick="sendPrompt('Что делает ModelService.cs?')">
+                <rect x="370" y="292" width="290" height="44" rx="6" stroke-width="1" />
+                <text class="th" x="515" y="310" text-anchor="middle" dominant-baseline="central">Plugin/Services/ModelService.cs</text>
+                <text class="ts" x="515" y="328" text-anchor="middle" dominant-baseline="central">требует открытый Revit</text>
+            </g>
+
+            <g class="node c-blue" onclick="sendPrompt('Что делает eventsTools.py?')">
+                <rect x="20" y="350" width="290" height="44" rx="6" stroke-width="1" />
+                <text class="th" x="165" y="368" text-anchor="middle" dominant-baseline="central">eventsTools.py</text>
+                <text class="ts" x="165" y="386" text-anchor="middle" dominant-baseline="central">on_failure_processing, on_dialog_open</text>
+            </g>
+            <line x1="310" y1="372" x2="368" y2="372" stroke="#3B8BD4" stroke-width="1" marker-end="url(#arr3)" />
+            <g class="node c-blue" onclick="sendPrompt('Что делает EventService.cs?')">
+                <rect x="370" y="350" width="290" height="44" rx="6" stroke-width="1" />
+                <text class="th" x="515" y="368" text-anchor="middle" dominant-baseline="central">Plugin/Services/EventService.cs</text>
+                <text class="ts" x="515" y="386" text-anchor="middle" dominant-baseline="central">IFailuresPreprocessor, подписка событий</text>
+            </g>
+
+            <g class="node c-gray" onclick="sendPrompt('Как устроена точка входа в Python плагин?')">
+                <rect x="20" y="408" width="290" height="44" rx="6" stroke-width="1" />
+                <text class="th" x="165" y="426" text-anchor="middle" dominant-baseline="central">Copy_Models_script.py</text>
+                <text class="ts" x="165" y="444" text-anchor="middle" dominant-baseline="central">if __name__ == '__main__' → main()</text>
+            </g>
+            <line x1="310" y1="430" x2="368" y2="430" stroke="var(--t)" stroke-width="1" marker-end="url(#arr3)" />
+            <g class="node c-gray" onclick="sendPrompt('Как работает IExternalCommand в Revit?')">
+                <rect x="370" y="408" width="290" height="44" rx="6" stroke-width="1" />
+                <text class="th" x="515" y="426" text-anchor="middle" dominant-baseline="central">Plugin/CopyModelsCommand.cs</text>
+                <text class="ts" x="515" y="444" text-anchor="middle" dominant-baseline="central">IExternalCommand.Execute()</text>
+            </g>
+
+            <text class="ts" x="340" y="490" text-anchor="middle" style="fill:var(--color-text-secondary)">JSON конфиги не меняются — C# читает те же файлы что Python</text>
+
+        </svg>
+    </div>
+
+    <script>
+        // Добавленная функция для обработки кликов по блокам
+        function sendPrompt(message) {
+            // Вы можете заменить это на любую другую логику (например, вызов вашей функции-помощника)
+            alert("Вопрос для промпта:\n" + message);
+        }
+
+        function show(id) {
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('panel-' + id).classList.add('active');
+            event.target.classList.add('active');
+        }
+    </script>
+
+</body>
+</html>

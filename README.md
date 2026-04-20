@@ -24,8 +24,8 @@
 
 ### C# версия — в разработке
 - [x] Архитектура проекта спроектирована
-- [ ] `ProjectSettings.cs` — класс данных одного задания
-- [ ] `ModelSetting.cs` — класс данных одной модели
+- [x] `ProjectSettings.cs` — класс данных одного задания
+- [x] `ModelSetting.cs` — класс данных одной модели
 - [ ] `SettingsReader.cs` — чтение JSON конфигов
 - [ ] `FileService.cs` — копирование файлов, архив
 - [ ] `RevitServerService.cs` — работа с RSN через REST
