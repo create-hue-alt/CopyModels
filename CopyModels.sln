@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CopyModels.Plugin", "CopyMo
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CopyModels.Core", "CopyModels.Core\CopyModels.Core.csproj", "{ADE89861-5EB7-4E43-A4B5-5B15D1787BF7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CopyModels.ConsoleTest", "CopyModels.ConsoleTest\CopyModels.ConsoleTest.csproj", "{8BCB0E9D-517B-451A-A236-9376DEE02D31}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -29,6 +31,10 @@ Global
 		{ADE89861-5EB7-4E43-A4B5-5B15D1787BF7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{ADE89861-5EB7-4E43-A4B5-5B15D1787BF7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{ADE89861-5EB7-4E43-A4B5-5B15D1787BF7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8BCB0E9D-517B-451A-A236-9376DEE02D31}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8BCB0E9D-517B-451A-A236-9376DEE02D31}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8BCB0E9D-517B-451A-A236-9376DEE02D31}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8BCB0E9D-517B-451A-A236-9376DEE02D31}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
