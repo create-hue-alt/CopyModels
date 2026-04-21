@@ -26,7 +26,8 @@
 - [x] Архитектура проекта спроектирована
 - [x] `ProjectSettings.cs` — класс данных одного задания
 - [x] `ModelSetting.cs` — класс данных одной модели
-- [ ] `SettingsReader.cs` — чтение JSON конфигов
+- [x] `SettingsReader.cs` — чтение JSON конфигов ✅
+- [x] `CopyModels.ConsoleTest` — тестирование Core логики ✅
 - [ ] `FileService.cs` — копирование файлов, архив
 - [ ] `RevitServerService.cs` — работа с RSN через REST
 - [ ] `ModelService.cs` — открытие / экспорт моделей
@@ -39,14 +40,14 @@
 
 ```
 CopyModels.sln
-├── CopyModels.Core      — бизнес-логика, БЕЗ зависимости от Revit API
+├── CopyModels.Core           — бизнес-логика, БЕЗ зависимости от Revit API
 │   ├── Models/
-│   │   ├── ProjectSettings.cs
-│   │   └── ModelSetting.cs
+│   │   ├── ProjectSettings.cs     ✅
+│   │   └── ModelSetting.cs        ✅
 │   └── Settings/
-│       └── SettingsReader.cs
+│       └── SettingsReader.cs      ✅
 │
-├── CopyModels.Plugin    — требует RevitAPI.dll
+├── CopyModels.Plugin         — требует RevitAPI.dll
 │   ├── Services/
 │   │   ├── FileService.cs
 │   │   ├── RevitServerService.cs
@@ -54,7 +55,13 @@ CopyModels.sln
 │   │   └── EventService.cs
 │   └── CopyModelsCommand.cs
 │
-└── CopyModels.UI        — WPF интерфейс (этап 2)
+├── CopyModels.ConsoleTest    — тестирование Core (без Revit) ✅
+│   ├── Program.cs
+│   └── TestConfigs/
+│       ├── Architecture.json
+│       └── Structure.json
+│
+└── CopyModels.UI             — WPF интерфейс (этап 2)
     ├── MainWindow.xaml
     └── ViewModels/
         └── MainViewModel.cs
@@ -77,3 +84,14 @@ CopyModels.sln
 | `modelTools.py` | Работа с Revit API |
 | `serverTools.py` | Файловая система и Revit Server |
 | `eventsTools.py` | Обработка диалогов и ошибок |
+
+## Текущий статус (сессия 4)
+
+✅ **Core слой готов к использованию:**
+- Все классы данных написаны и протестированы
+- SettingsReader успешно читает JSON конфиги
+- Все 6 проверок пройдены
+
+⏳ **Следующий этап:**
+- FileService.cs — копирование и архивирование файлов
+- Затем остальные сервисы Plugin

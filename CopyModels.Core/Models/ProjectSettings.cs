@@ -15,6 +15,7 @@ namespace CopyModels.Core.Models
         // Идентификация
         public string Discipline { get; }
         public string Project { get; }
+        public string Name { get; }
 
         /// <summary>Отображение имя строки в UI списке </summary>
         public string DisplayName { get; }
@@ -25,7 +26,7 @@ namespace CopyModels.Core.Models
 
         // Путь источника к цели
         public string SourcePath { get; }    // Может быть null
-        public List<string> TargetPath { get; }
+        public List<string> TargetPaths { get; }
 
         // Опция копирования
         public bool SelectableCopy { get; }
@@ -87,6 +88,7 @@ namespace CopyModels.Core.Models
 
             Discipline = discipline;
             Project = project;
+            Name = name;
 
             var now = DateTime.Now;
 
@@ -102,23 +104,23 @@ namespace CopyModels.Core.Models
                                              now);
 
             // Цели
-            TargetPath = new List<string>();
+            TargetPaths = new List<string>();
             if (settings["Target Path"] is JArray targets)
             {
                 foreach (var t in targets)
                 {
-                    TargetPath.Add(ReplacePlaceholders(t.Value<string>(),
+                    TargetPaths.Add(ReplacePlaceholders(t.Value<string>(),
                                                         project,
                                                         now));
                 }
             }
 
             // Имя для UI
-            var nameExtension = TargetPath
+            var nameExtension = TargetPaths
                                 .Select(t => Path.GetExtension(t).ToUpper())
                                 .Distinct()
                                 .ToList();
-            DisplayName = $"{discipline, -20} | {project, -35} | {name, -35}";
+            DisplayName = $"{discipline,-20} | {project, -35} | {name, -35}";
             if (SourcePath != null)
             {
                 DisplayName += " | " + Path.GetExtension(SourcePath).ToUpper();
@@ -182,7 +184,7 @@ namespace CopyModels.Core.Models
         }
 
         //
-        // Вспомогательгые методы
+        // Вспомогательные методы
         //
 
         /// <summary>

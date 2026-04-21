@@ -1,0 +1,21 @@
+{
+  "ProjectA": {
+    "Task1": {
+      "Source Path": "C:\\Models\\source_arch.rvt",
+      "Target Path": [ "C:\\Models\\target_arch.rvt" ],
+      "Purge": false
+    },
+    "Task2": {
+      "Source Path": "C:\\Models\\source_arch2.rvt",
+      "Target Path": [ "C:\\Models\\target_arch2.rvt" ],
+      "Purge": true
+    }
+  },
+  "ProjectB": {
+    "Task3": {
+      "Source Path": "C:\\Models\\source_b.rvt",
+      "Target Path": [ "C:\\Models\\target_b.rvt" ],
+      "Purge": false
+    }
+  }
+}
