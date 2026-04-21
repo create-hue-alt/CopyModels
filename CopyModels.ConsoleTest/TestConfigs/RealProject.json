@@ -1,0 +1,177 @@
+{
+  "20175": {
+    "From RVT RS to RVT FS": {
+      "Source Path": "RSN://k-2133.atptlp.local/20175_INARCTICA/*.rvt",
+      "Target Path": [
+        "P:\\MOS-TLP\\PROJEKTE\\20175\\00_REVIT\\00_Modell\\_00_FromRS\\{DATE}\\*.rvt"
+      ],
+      "Selectable Copy": true,
+      "Keep Structure": false,
+      "Copy Exceptions": [],
+      "Path Exceptions": [
+        "Archive"
+      ],
+      "Purge": true,
+      "Full Open Mask": [],
+      "Close Workset Mask": [
+        "000"
+      ],
+      "Delete Missed": false,
+      "Transmit": true,
+      "Relative Links": true
+    },
+    "From RVT RS to NWC FS": {
+      "Source Path": "RSN://k-2133.atptlp.local/20175_INARCTICA/*.rvt",
+      "Target Path": [
+        "P:\\MOS-TLP\\PROJEKTE\\20175\\00_BIM-KOMMUNIKATION\\01_Navisworks\\01_NWC\\*.nwc"
+      ],
+      "Selectable Copy": true,
+      "Keep Structure": true,
+      "Copy Exceptions": [],
+      "Path Exceptions": [
+        "Archive"
+      ],
+      "Purge": false,
+      "Full Open Mask": [],
+      "Close Workset Mask": [
+        "000"
+      ],
+      "Delete Missed": false,
+      "Archive": false,
+      "NWC Divide into Levels": false,
+      "Clean BackUp": true
+    }
+  },
+  "20197": {
+    "From RVT RS to RVT FS": {
+      "Source Path": "RSN://k-2133.atptlp.local/20197_AGROECO/*.rvt",
+      "Target Path": [
+        "P:\\MOS-TLP\\PROJEKTE\\20197\\00_REVIT\\00_Modell\\_00_FromRS\\{DATE}\\*.rvt"
+      ],
+      "Selectable Copy": true,
+      "Keep Structure": false,
+      "Copy Exceptions": [],
+      "Path Exceptions": [
+        "Archive"
+      ],
+      "Purge": true,
+      "Full Open Mask": [],
+      "Close Workset Mask": [
+        "000"
+      ],
+      "Delete Missed": false,
+      "Transmit": true,
+      "Relative Links": true
+    },
+    "From RVT RS to NWC FS": {
+      "Source Path": "RSN://k-2133.atptlp.local/20197_AGROECO/*.rvt",
+      "Target Path": [
+        "P:\\MOS-TLP\\PROJEKTE\\20197\\00_BIM-KOMMUNIKATION\\01_Navisworks\\01_NWC\\*.nwc"
+      ],
+      "Selectable Copy": true,
+      "Keep Structure": true,
+      "Copy Exceptions": [],
+      "Path Exceptions": [
+        "Archive"
+      ],
+      "Purge": false,
+      "Full Open Mask": [],
+      "Close Workset Mask": [
+        "000"
+      ],
+      "Delete Missed": false,
+      "Archive": false,
+      "NWC Divide into Levels": false,
+      "Clean BackUp": true
+    }
+  },
+  "21150": {
+    "From RVT RS to RVT FS": {
+      "Source Path": "RSN://k-2133.atptlp.local/21150_TINAO/*.rvt",
+      "Target Path": [
+        "P:\\MOS-TLP\\PROJEKTE\\21150\\00_REVIT\\00_Modell\\_00_FromRS\\{DATE}\\*.rvt"
+      ],
+      "Selectable Copy": true,
+      "Keep Structure": false,
+      "Copy Exceptions": [],
+      "Path Exceptions": [
+        "Archive"
+      ],
+      "Purge": true,
+      "Full Open Mask": [],
+      "Close Workset Mask": [
+        "000"
+      ],
+      "Delete Missed": false,
+      "Transmit": true,
+      "Relative Links": true
+    },
+    "From RVT RS to NWC FS": {
+      "Source Path": "RSN://k-2133.atptlp.local/21150_TINAO/*.rvt",
+      "Target Path": [
+        "P:\\MOS-TLP\\PROJEKTE\\21150\\00_BIM-KOMMUNIKATION\\01_Navisworks\\01_NWC\\*.nwc"
+      ],
+      "Selectable Copy": true,
+      "Keep Structure": true,
+      "Copy Exceptions": [],
+      "Path Exceptions": [
+        "Archive"
+      ],
+      "Purge": false,
+      "Full Open Mask": [],
+      "Close Workset Mask": [
+        "000"
+      ],
+      "Delete Missed": false,
+      "Archive": false,
+      "NWC Divide into Levels": false,
+      "Clean BackUp": true
+    }
+  },
+  "20207": {
+    "From RVT RS to RVT FS": {
+      "Source Path": "RSN://k-2133.atptlp.local/20207_TECHNOGOROD/*.rvt",
+      "Target Path": [
+        "P:\\MOS-TLP\\PROJEKTE\\20207\\00_REVIT\\00_Modell\\_00_FromRS\\{DATE}\\*.rvt"
+      ],
+      "Selectable Copy": true,
+      "Keep Structure": false,
+      "Copy Exceptions": [],
+      "Path Exceptions": [
+        "Archive"
+      ],
+      "Purge": true,
+      "Full Open Mask": [],
+      "Close Workset Mask": [
+        "000",
+        "010",
+        "020"
+      ],
+      "Delete Missed": false,
+      "Archive": false,
+      "NWC Divide into Levels": true,
+      "Clean BackUp": true
+    },
+    "From RVT RS to NWC FS": {
+      "Source Path": "RSN://k-2133.atptlp.local/20207_TECHNOGOROD/*.rvt",
+      "Target Path": [
+        "P:\\MOS-TLP\\PROJEKTE\\20207\\00_BIM-KOMMUNIKATION\\01_Navisworks\\01_NWC\\*.nwc"
+      ],
+      "Selectable Copy": true,
+      "Keep Structure": true,
+      "Copy Exceptions": [],
+      "Path Exceptions": [
+        "Archive"
+      ],
+      "Purge": false,
+      "Full Open Mask": [],
+      "Close Workset Mask": [
+        "000"
+      ],
+      "Delete Missed": false,
+      "Archive": false,
+      "NWC Divide into Levels": false,
+      "Clean BackUp": true
+    }
+  }
+}

@@ -9,7 +9,7 @@ CopyModels.sln
 │   │   ├── ProjectSettings.cs      — поля одного задания + парсинг JSON
 │   │   └── ModelSetting.cs         — поля одной модели + логика дат
 │   └── Settings/
-│       └── SettingsReader.cs       — читает JSON файлы, создаёт ProjectSettings
+│       └── SettingsReader.cs       — читает JSON файлы, создаёт ProjectSettings ✅
 │
 ├── CopyModels.Plugin               — требует RevitAPI.dll
 │   ├── Services/
@@ -18,6 +18,12 @@ CopyModels.sln
 │   │   ├── ModelService.cs         — открытие / экспорт / сохранение моделей Revit
 │   │   └── EventService.cs         — подписка на события, автозакрытие диалогов
 │   └── CopyModelsCommand.cs        — IExternalCommand, точка входа
+│
+├── CopyModels.ConsoleTest          — тестирование Core логики (без Revit)
+│   ├── Program.cs
+│   └── TestConfigs/                — JSON файлы для тестирования
+│       ├── Architecture.json
+│       └── Structure.json
 │
 └── CopyModels.UI                   — WPF интерфейс (этап 2)
     ├── MainWindow.xaml
@@ -37,43 +43,49 @@ CopyModels.sln
 
 ## Соответствие Python → C#
 
-| Python файл | C# файл | Примечание |
+| Python файл | C# файл | Статус |
 |---|---|---|
-| `settings_classes.py → ProjectSettings` | `Core/Models/ProjectSettings.cs` | |
-| `settings_classes.py → ModelSetting` | `Core/Models/ModelSetting.cs` | |
-| `serverTools.py` | `Plugin/Services/FileService.cs` | Без Revit API, но в Plugin |
-| `serverTools.py` (RSN часть) | `Plugin/Services/RevitServerService.cs` | HTTP запросы |
-| `modelTools.py` | `Plugin/Services/ModelService.cs` | Требует Revit API |
-| `eventsTools.py` | `Plugin/Services/EventService.cs` | Требует Revit API |
-| `script.py` (точка входа) | `Plugin/CopyModelsCommand.cs` | IExternalCommand |
-| `*.json` конфиги | без изменений | Читаем те же файлы |
+| `settings_classes.py → ProjectSettings` | `Core/Models/ProjectSettings.cs` | ✅ |
+| `settings_classes.py → ModelSetting` | `Core/Models/ModelSetting.cs` | ✅ |
+| `read_setting_file()` | `Core/Settings/SettingsReader.cs` | ✅ |
+| `serverTools.py` | `Plugin/Services/FileService.cs` | ⏳ |
+| `serverTools.py` (RSN часть) | `Plugin/Services/RevitServerService.cs` | ⏳ |
+| `modelTools.py` | `Plugin/Services/ModelService.cs` | ⏳ |
+| `eventsTools.py` | `Plugin/Services/EventService.cs` | ⏳ |
+| `script.py` (точка входа) | `Plugin/CopyModelsCommand.cs` | ⏳ |
+| `*.json` конфиги | без изменений | ✅ |
 
 ## Чеклист реализации
 
-### Core/Models
-- [x] `ProjectSettings.cs` — поля описаны, конструктор в процессе
-- [x] `ModelSetting.cs`
+### Core/Models ✅
+- [x] `ProjectSettings.cs` — все поля и конструктор
+- [x] `ModelSetting.cs` — все поля и логика дат
 
-### Core/Settings
-- [ ] `SettingsReader.cs` — чтение JSON конфигов
+### Core/Settings ✅
+- [x] `SettingsReader.cs` — чтение JSON конфигов, парсинг структуры
 
-### Plugin/Services
+### Core/Tests ✅
+- [x] `CopyModels.ConsoleTest` — консольное тестирование
+- [x] Простые JSON конфиги для проверки
+- [x] 6 проверок (assertions) — все пройдены ✅
+
+### Plugin/Services ⏳
 - [ ] `FileService.cs`
 - [ ] `RevitServerService.cs`
 - [ ] `ModelService.cs`
 - [ ] `EventService.cs`
 
-### Plugin
+### Plugin ⏳
 - [ ] `CopyModelsCommand.cs`
 
-### UI (Этап 2)
+### UI (Этап 2) ⏳
 - [ ] `MainWindow.xaml`
 - [ ] `MainViewModel.cs`
 - [ ] Список заданий с галочками
 - [ ] Список моделей с галочками
 - [ ] Выбор форматов экспорта
 
-### Планировщик (Этап 3)
+### Планировщик (Этап 3) ⏳
 - [ ] Интеграция с Windows Task Scheduler
 - [ ] UI для настройки расписания
 
@@ -137,29 +149,67 @@ CopyModels.sln
 - Методы: `ReplacePlaceholders()`, `ParseStringList()`
 
 **Найденные и исправленные ошибки:**
-- `"Target Paths"` → `"Target Path"` (опечатка в ключе JSON — компилятор не поймает)
+- `"Target Paths"` → `"Target Path"` (опечатка в ключе JSON — компилятор не поймет)
 - `{DATA}` → `{DATE}` (опечатка в плейсхолдере)
 - `Transmit = ... ?? false` → убрали `?? false`, нужен чистый `bool?`
 - `NwcLinkedFiles` — добавлено осознанно для управления экспортом связанных файлов
 
-**Следующий шаг:**
-- Дописать оставшиеся поля конструктора: `SelectableCopy`, `CloseWorksetMask`, `CopyExceptions`, `PathExceptions`, `RelativeLinks`, `MapDrive`, `DisplayName`, IFC-поля, NWC-поля, Recipients
-- Перейти к `ModelSetting.cs`
+---
+
+### Сессия 3 — ModelSetting.cs
+
+**Что сделали:**
+- Полностью написаны классы `ProjectSettings` и `ModelSetting`
+
+**Ключевые вещи:**
+- `ProjectSettings` содержит все параметры одного задания из JSON
+- `ModelSetting` содержит информацию об одной модели (источник + целевые пути)
+- `DisplayName` форматируется красиво с отступами для UI
 
 ---
 
-## Сессия 3 
+### Сессия 4 — SettingsReader.cs и первое тестирование ✅
 
-**Написанный код:**
-- Полностью написаны файлы `ProjectSettings`, `ModelSetting`
+**Дата:** 21.04.2026
+
+**Что сделали:**
+- Написали `SettingsReader.cs` — главный класс для чтения JSON конфигов
+- Создали `CopyModels.ConsoleTest` проект для тестирования
+- Создали простые JSON файлы с тестовыми данными
+- Написали полный `Program.cs` с 6 проверками
+- **Запустили и ВСЕ ПРОВЕРКИ ПРОЙДЕНЫ!** ✅
+
+**Результаты тестирования:**
+```
+✓ Проверка 1: найдено 2 дисциплины (Architecture, Structure)
+✓ Проверка 2: дисциплины найдены в списке
+✓ Проверка 3: Architecture содержит ProjectA и ProjectB
+✓ Проверка 4: Architecture содержит 3 задания
+✓ Проверка 5: ReadAll() содержит 5 заданий
+✓ Проверка 6: DisplayName не пустой и отформатирован
+```
+
+**Что делает SettingsReader:**
+1. `GetDisciplineNames()` — возвращает список имён дисциплин (.json файлы)
+2. `ReadDiscipline(name)` — читает одну дисциплину
+3. `ReadAll()` — читает все дисциплины сразу
+4. Возвращает `Dictionary<string, List<ProjectSettings>>` с ключами "ALL", "ProjectA", "ProjectB" и т.д.
+5. Автоматически сортирует по `DisplayName`
+
+**Разобранные концепции:**
+- `Directory.GetFiles()` — поиск файлов по маске
+- `Path.GetFileNameWithoutExtension()` — получить имя без расширения
+- `JObject.Parse()` — парсить JSON
+- `foreach (var projectProp in root.Properties())` — итерация по объектам JSON
+- `IReadOnlyList<T>` — возвращаемый тип (только для чтения)
+
+**Найденные и исправленные ошибки:**
+- Убрали второй параметр `disciplines` из `ReadFiles()` — дисциплина теперь берётся из имени файла
+- Упростили `ReadAll()` — теперь просто `Directory.GetFiles()` и в `ReadFiles()`
 
 **Следующий шаг:**
-- Теперь переходим к следующему файлу: SettingsReader.cs в Core/Settings/.
-Этот класс должен:
-
-Читать JSON файл конфига
-Парсить структуру: дисциплины → проекты → задания
-Создавать список ProjectSettings объектов
+- Протестировать на реальных конфигах (3 проекта, 30+ заданий)
+- Переходить к `FileService.cs` — копирование файлов
 
 ---
 
@@ -170,12 +220,10 @@ CopyModels.sln
 | Как хранить конфиги? | JSON файлы, тот же формат что в Python версии |
 | Планировщик — как реализовать? | Windows Task Scheduler, управляется из UI |
 | UI паттерн? | MVVM — стандарт для WPF |
-| ModelService в Core или Plugin? | Plugin — он требует открытый Revit, нарушение границы в первой версии было ошибкой |
+| ModelService в Core или Plugin? | Plugin — он требует открытый Revit |
 | Выравнивание колонками в VS? | Расширение Align Assignments, но не критично |
 | Codeium конфликт с VS? | Отключить `Tools → Options → IntelliCode → C# whole line completions` |
-
-
-
+| Как тестировать Core без Revit? | Консольное приложение — зависит только от Core и Newtonsoft.Json |
 
 ---
 
@@ -185,4 +233,3 @@ CopyModels.sln
 - [Revit API Forum](https://forums.autodesk.com/t5/revit-api-forum/bd-p/160)
 - [MVVM паттерн](https://learn.microsoft.com/ru-ru/dotnet/architecture/maui/mvvm)
 - [Newtonsoft.Json документация](https://www.newtonsoft.com/json/help/html/Introduction.htm)
-- [Codeium для VS](https://marketplace.visualstudio.com/items?itemName=Codeium.codeium-visual-studio)

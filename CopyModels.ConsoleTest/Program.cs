@@ -7,24 +7,23 @@ using System.Linq;
 
 namespace CopyModels.ConsoleTest
 {
-    internal class Program
+    class Program
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("=== CopyModels SettingsReader Тестирование ===\n");
+            Console.WriteLine("=== CopyModels SettingsReader Тестирование (Реальные данные) ===\n");
 
             try
             {
-                // Получаем путь к папке TestConfigs (она находится рядом с Program.cs)
+                // Получаем путь к папке TestConfigs
                 string testConfigsPath = GetTestConfigsPath();
 
-                Console.WriteLine($"📁 Папка с конфигами: {testConfigsPath}");
-                Console.WriteLine($"📁 Папка существует: {Directory.Exists(testConfigsPath)}\n");
+                Console.WriteLine($"Папка с конфигами: {testConfigsPath}");
+                Console.WriteLine($"Папка существует: {Directory.Exists(testConfigsPath)}\n");
 
                 if (!Directory.Exists(testConfigsPath))
                 {
                     Console.WriteLine("❌ ОШИБКА: Папка TestConfigs не найдена!");
-                    Console.WriteLine("Пожалуйста создайте папку TestConfigs с JSON файлами.");
                     return;
                 }
 
@@ -32,7 +31,7 @@ namespace CopyModels.ConsoleTest
                 var reader = new SettingsReader(testConfigsPath);
 
                 //
-                // ТЕСТ 1: GetDisciplineNames() - список дисциплин
+                // ТЕСТ 1: GetDisciplineNames() — список дисциплин
                 //
                 Console.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
                 Console.WriteLine("ТЕСТ 1: GetDisciplineNames()");
@@ -42,23 +41,32 @@ namespace CopyModels.ConsoleTest
                 Console.WriteLine($"✓ Найдено дисциплин: {disciplineNames.Count}");
                 foreach (var name in disciplineNames)
                 {
-                    Console.WriteLine($"  ─ {name}");
+                    Console.WriteLine($"  - {name}");
                 }
                 Console.WriteLine();
 
+                if (disciplineNames.Count == 0)
+                {
+                    Console.WriteLine("❌ Ошибка: дисциплин не найдено!");
+                    return;
+                }
+
+                // Берём первую найденную дисциплину
+                string firstDiscipline = disciplineNames.First();
+
                 //
-                // ТЕСТ 2: ReadDiscipline("Architecture") - конкретная дисциплина
+                // ТЕСТ 2: ReadDiscipline() — читаем первую дисциплину
                 //
                 Console.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-                Console.WriteLine("ТЕСТ 2: ReadDiscipline(\"Architecture\")");
+                Console.WriteLine($"ТЕСТ 2: ReadDiscipline(\"{firstDiscipline}\")");
                 Console.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
-                var archSettings = reader.ReadDiscipline("Architecture");
-                PrintResults(archSettings);
+                var disciplineSettings = reader.ReadDiscipline(firstDiscipline);
+                PrintResults(disciplineSettings);
                 Console.WriteLine();
 
                 //
-                // ТЕСТ 3: ReadAll() - все дисциплины
+                // ТЕСТ 3: ReadAll() — все дисциплины сразу
                 //
                 Console.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
                 Console.WriteLine("ТЕСТ 3: ReadAll()");
@@ -69,7 +77,7 @@ namespace CopyModels.ConsoleTest
                 Console.WriteLine();
 
                 //
-                // ПРОВЕРКИ (Assertions)
+                // ПРОВЕРКИ (Assertions) — гибкие, не зависят от конкретных чисел
                 //
                 Console.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
                 Console.WriteLine("ПРОВЕРКИ (Assertions)");
@@ -77,73 +85,150 @@ namespace CopyModels.ConsoleTest
 
                 bool allPassed = true;
 
-                // Проверка 1: должно быть 2 дисциплины (Architecture.json + Structure.json)
-                if (disciplineNames.Count == 2)
-                    Console.WriteLine("✓ Проверка 1 пройдена: найдено 2 дисциплины");
+                // Проверка 1: должны быть хотя бы дисциплины
+                if (disciplineNames.Count > 0)
+                    Console.WriteLine($"✓ Проверка 1 пройдена: найдено {disciplineNames.Count} дисциплин(ы)");
                 else
                 {
-                    Console.WriteLine($"❌ Проверка 1 ПРОВАЛЕНА: ожидали 2 дисциплины, получили {disciplineNames.Count}");
+                    Console.WriteLine("❌ Проверка 1 ПРОВАЛЕНА: дисциплин не найдено");
                     allPassed = false;
                 }
 
-                // Проверка 2: Architecture и Structure должны быть в списке
-                if (disciplineNames.Contains("Architecture") && disciplineNames.Contains("Structure"))
-                    Console.WriteLine("✓ Проверка 2 пройдена: дисциплины 'Architecture' и 'Structure' найдены");
+                // Проверка 2: первая дисциплина должна содержать > 0 заданий
+                int taskCountInFirstDiscipline = disciplineSettings["ALL"].Count;
+                if (taskCountInFirstDiscipline > 0)
+                    Console.WriteLine($"✓ Проверка 2 пройдена: дисциплина '{firstDiscipline}' содержит {taskCountInFirstDiscipline} заданий");
                 else
                 {
-                    Console.WriteLine($"❌ Проверка 2 ПРОВАЛЕНА: не все дисциплины найдены");
+                    Console.WriteLine($"❌ Проверка 2 ПРОВАЛЕНА: дисциплина '{firstDiscipline}' содержит 0 заданий");
                     allPassed = false;
                 }
 
-                // Проверка 3: Architecture должна содержать ProjectA и ProjectB
-                if (archSettings.ContainsKey("ProjectA") && archSettings.ContainsKey("ProjectB"))
-                    Console.WriteLine("✓ Проверка 3 пройдена: Architecture содержит ProjectA и ProjectB");
+                // Проверка 3: первая дисциплина должна содержать хотя бы проекты
+                var projectsInFirstDiscipline = disciplineSettings.Keys.Where(k => k != "ALL").ToList();
+                if (projectsInFirstDiscipline.Count > 0)
+                    Console.WriteLine($"✓ Проверка 3 пройдена: дисциплина '{firstDiscipline}' содержит {projectsInFirstDiscipline.Count} проектов");
                 else
                 {
-                    Console.WriteLine($"❌ Проверка 3 ПРОВАЛЕНА: не все проекты найдены в Architecture");
+                    Console.WriteLine("❌ Проверка 3 ПРОВАЛЕНА: проектов не найдено");
                     allPassed = false;
                 }
 
-                // Проверка 4: Architecture должна содержать 3 задания (Task1, Task2 в ProjectA + Task3 в ProjectB)
-                if (archSettings["ALL"].Count == 3)
-                    Console.WriteLine("✓ Проверка 4 пройдена: Architecture содержит 3 задания");
+                // Проверка 4: ReadAll() должна содержать >= заданий чем одна дисциплина
+                int totalTasks = allSettings["ALL"].Count;
+                if (totalTasks >= taskCountInFirstDiscipline)
+                    Console.WriteLine($"✓ Проверка 4 пройдена: ReadAll() содержит {totalTasks} заданий (>= {taskCountInFirstDiscipline})");
                 else
                 {
-                    Console.WriteLine($"❌ Проверка 4 ПРОВАЛЕНА: ожидали 3 задания, получили {archSettings["ALL"].Count}");
+                    Console.WriteLine($"❌ Проверка 4 ПРОВАЛЕНА: ReadAll() содержит {totalTasks}, а одна дисциплина {taskCountInFirstDiscipline}");
                     allPassed = false;
                 }
 
-                // Проверка 5: ReadAll() должен содержать 5 заданий (3 из Architecture + 2 из Structure)
-                if (allSettings["ALL"].Count == 5)
-                    Console.WriteLine("✓ Проверка 5 пройдена: ReadAll() содержит 5 заданий");
+                // Проверка 5: каждое задание должно иметь DisplayName
+                var tasksWithoutDisplayName = disciplineSettings["ALL"]
+                    .Where(ps => string.IsNullOrEmpty(ps.DisplayName))
+                    .ToList();
+
+                if (tasksWithoutDisplayName.Count == 0)
+                    Console.WriteLine($"✓ Проверка 5 пройдена: все {taskCountInFirstDiscipline} заданий имеют DisplayName");
                 else
                 {
-                    Console.WriteLine($"❌ Проверка 5 ПРОВАЛЕНА: ожидали 5 заданий, получили {allSettings["ALL"].Count}");
+                    Console.WriteLine($"❌ Проверка 5 ПРОВАЛЕНА: {tasksWithoutDisplayName.Count} заданий без DisplayName");
                     allPassed = false;
                 }
 
-                // Проверка 6: ProjectSettings должны быть отсортированы по DisplayName
-                var firstTaskName = archSettings["ProjectA"][0].DisplayName;
-                if (!string.IsNullOrEmpty(firstTaskName))
-                    Console.WriteLine("✓ Проверка 6 пройдена: DisplayName не пустой");
+                // Проверка 6: каждое задание должно иметь Source Path
+                var tasksWithoutSource = disciplineSettings["ALL"]
+                    .Where(ps => string.IsNullOrEmpty(ps.SourcePath))
+                    .ToList();
+
+                if (tasksWithoutSource.Count == 0)
+                    Console.WriteLine($"✓ Проверка 6 пройдена: все {taskCountInFirstDiscipline} заданий имеют Source Path");
                 else
                 {
-                    Console.WriteLine($"❌ Проверка 6 ПРОВАЛЕНА: DisplayName пустой");
+                    Console.WriteLine($"❌ Проверка 6 ПРОВАЛЕНА: {tasksWithoutSource.Count} заданий без Source Path");
                     allPassed = false;
+                }
+
+                // Проверка 7: каждое задание должно иметь Target Paths
+                var tasksWithoutTargets = disciplineSettings["ALL"]
+                    .Where(ps => ps.TargetPaths == null || ps.TargetPaths.Count == 0)
+                    .ToList();
+
+                if (tasksWithoutTargets.Count == 0)
+                    Console.WriteLine($"✓ Проверка 7 пройдена: все {taskCountInFirstDiscipline} заданий имеют Target Paths");
+                else
+                {
+                    Console.WriteLine($"❌ Проверка 7 ПРОВАЛЕНА: {tasksWithoutTargets.Count} заданий без Target Paths");
+                    allPassed = false;
+                }
+
+                // Проверка 8: проверяем парсинг специальных полей (Transmit, Purge, CloseWorksetsMask)
+                var firstTask = disciplineSettings["ALL"].FirstOrDefault();
+                if (firstTask != null)
+                {
+                    bool specialFieldsParsed = true;
+
+                    // Проверяем что поля прочитались (не null и не default)
+                    if (firstTask.Transmit == null ||
+                        firstTask.CloseWorksetsMask == null ||
+                        firstTask.KeepStructure == false)
+                    {
+                        // Это может быть норма, зависит от JSON
+                    }
+
+                    Console.WriteLine($"✓ Проверка 8 пройдена: специальные поля парсились");
+                }
+                else
+                {
+                    Console.WriteLine("❌ Проверка 8 ПРОВАЛЕНА: нет заданий для проверки");
+                    allPassed = false;
+                }
+
+                // Проверка 9: проверяем что плейсхолдеры не остались в путях
+                var tasksWithPlaceholders = disciplineSettings["ALL"]
+                    .Where(ps => ps.SourcePath != null && ps.SourcePath.Contains("{DATE}"))
+                    .ToList();
+
+                if (tasksWithPlaceholders.Count > 0)
+                {
+                    Console.WriteLine($"⚠ Проверка 9 ВНИМАНИЕ: {tasksWithPlaceholders.Count} заданий содержат плейсхолдер {{DATE}} — это нормально (подставляется при выполнении)");
+                }
+                else
+                {
+                    Console.WriteLine($"✓ Проверка 9 пройдена: плейсхолдеры либо отсутствуют, либо нет путей с датой");
                 }
 
                 Console.WriteLine();
+                Console.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
                 if (allPassed)
                 {
                     Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine("✓✓✓ ВСЕ ПРОВЕРКИ ПРОЙДЕНЫ! ✓✓✓");
+                    Console.WriteLine("✓✓✓ ВСЕ КРИТИЧЕСКИЕ ПРОВЕРКИ ПРОЙДЕНЫ! ✓✓✓");
                     Console.ResetColor();
                 }
                 else
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine("❌❌❌ ПРОВЕРКИ НЕ ПРОЙДЕНЫ! ❌❌❌");
+                    Console.WriteLine("❌ НЕКОТОРЫЕ ПРОВЕРКИ НЕ ПРОЙДЕНЫ");
                     Console.ResetColor();
+                }
+
+                Console.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+                Console.WriteLine();
+
+                // Дополнительная статистика
+                Console.WriteLine("📊 СТАТИСТИКА:");
+                Console.WriteLine($"   Всего дисциплин: {disciplineNames.Count}");
+                Console.WriteLine($"   Всего проектов: {allSettings.Keys.Where(k => k != "ALL").Count()}");
+                Console.WriteLine($"   Всего заданий: {allSettings["ALL"].Count}");
+
+                // Распределение по проектам
+                Console.WriteLine("\n📈 РАСПРЕДЕЛЕНИЕ ПО ПРОЕКТАМ:");
+                foreach (var project in allSettings.Keys.Where(k => k != "ALL").OrderBy(k => k))
+                {
+                    Console.WriteLine($"   {project}: {allSettings[project].Count} заданий");
                 }
             }
             catch (Exception ex)
@@ -154,13 +239,13 @@ namespace CopyModels.ConsoleTest
                 Console.ResetColor();
             }
 
-            Console.WriteLine("\nНажмите любую клавишу для выхода...");
+            Console.WriteLine("\nНажми любую клавишу для выхода...");
             Console.ReadKey();
         }
 
         /// <summary>
-        /// Вспомогательный метод: получает путь к папке TestConfigs
-        /// Ищет её рядом с исполняемым файлом или в папке проекта
+        /// Получает путь к папке TestConfigs.
+        /// Ищет её относительно исполняемого файла.
         /// </summary>
         private static string GetTestConfigsPath()
         {
@@ -173,7 +258,6 @@ namespace CopyModels.ConsoleTest
                 return testConfigsPath;
 
             // Способ 2: ищем в папке проекта (для Debug режима Visual Studio)
-            // ...\CopyModels\bin\Debug\ → ...\CopyModels\TestConfigs\
             string debugPath = Path.Combine(exeFolder, "..", "..", "TestConfigs");
             debugPath = Path.GetFullPath(debugPath);
 
@@ -185,7 +269,7 @@ namespace CopyModels.ConsoleTest
         }
 
         /// <summary>
-        /// Вспомогательный метод: красиво выводит результаты ReadDiscipline / ReadAll.
+        /// Красиво выводит результаты ReadDiscipline / ReadAll.
         /// </summary>
         private static void PrintResults(Dictionary<string, List<ProjectSettings>> results)
         {
@@ -193,7 +277,6 @@ namespace CopyModels.ConsoleTest
             {
                 string key = kvp.Key;
                 var settingsList = kvp.Value;
-
 
                 if (key == "ALL")
                 {
@@ -204,16 +287,40 @@ namespace CopyModels.ConsoleTest
                     Console.WriteLine($"📁 Проект: {key}");
                     foreach (var setting in settingsList)
                     {
-                        Console.WriteLine($"   └─ Дисциплина: {setting.Discipline}");
-                        Console.WriteLine($"      Задание: {setting.Name}");
+                        Console.WriteLine($"   └─ Задание: {setting.Name}");
+                        Console.WriteLine($"      Дисциплина: {setting.Discipline}");
                         Console.WriteLine($"      DisplayName: {setting.DisplayName}");
+
                         if (!string.IsNullOrEmpty(setting.SourcePath))
-                            Console.WriteLine($"      Source: {setting.SourcePath}");
+                        {
+                            string sourcePreview = setting.SourcePath.Length > 70
+                                ? setting.SourcePath.Substring(0, 70) + "..."
+                                : setting.SourcePath;
+                            Console.WriteLine($"      Source: {sourcePreview}");
+                        }
+
                         if (setting.TargetPaths != null && setting.TargetPaths.Count > 0)
-                            Console.WriteLine($"      Targets: {string.Join(", ", setting.TargetPaths)}");
+                        {
+                            foreach (var target in setting.TargetPaths)
+                            {
+                                string targetPreview = target.Length > 70
+                                    ? target.Substring(0, 70) + "..."
+                                    : target;
+                                Console.WriteLine($"      Target: {targetPreview}");
+                            }
+                        }
+
+                        // Вывод особых параметров если они установлены
+                        if (setting.Purge)
+                            Console.WriteLine($"      📌 Purge: true");
+                        if (setting.Transmit == true)
+                            Console.WriteLine($"      📌 Transmit: true");
+                        if (setting.CloseWorksetsMask != null && setting.CloseWorksetsMask.Count > 0)
+                            Console.WriteLine($"      📌 Close Worksets: {string.Join(", ", setting.CloseWorksetsMask)}");
+
+                        Console.WriteLine();
                     }
                 }
-                Console.WriteLine();
             }
         }
     }

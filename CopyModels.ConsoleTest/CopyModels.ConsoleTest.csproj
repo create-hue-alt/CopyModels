@@ -48,6 +48,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="TestConfigs\RealProject.json" />
     <None Include="TestConfigs\Structure.json" />
     <None Include="TestConfigs\Architecture.json" />
   </ItemGroup>
