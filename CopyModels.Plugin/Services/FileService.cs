@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -34,7 +35,11 @@ namespace CopyModels.Plugin.Services
         /// </summary>
         public double? GetModelDate(string path)
         {
-            throw new NotImplementedException();
+            if (string.IsNullOrEmpty(path)) return null;
+            if (IsRevitServer(path)) return null;
+            if (!File.Exists(path)) return null;
+
+            return (double)((DateTimeOffset)File.GetLastWriteTimeUtc(path)).ToUnixTimeSeconds();
         }
 
         //
@@ -44,7 +49,34 @@ namespace CopyModels.Plugin.Services
         /// <summary>Копирует файл с проверкой дат. Архивирует существующую цель если указана папка.</summary>
         public bool CopyFail(string sourcePaht, string targetPath, string archiveFolder = null)
         {
-            throw new NotImplementedException();
+            string archived = null;
+            try
+            {
+                if (archiveFolder != null)
+                    archived = ArchiveModel(targetPath, archiveFolder);
+
+                EnsureDirectory(targetPath);
+                File.Copy(sourcePaht, targetPath, overwrite: true);
+
+                var srcDate = GetModelDate(sourcePaht);
+                var tgtDate = GetModelDate(targetPath);
+
+                if (srcDate ==null || tgtDate == null || tgtDate >= srcDate)
+                    return true;
+
+                // Дата не совпала - откатываем
+                if (archived != null) File.Move(sourcePaht, targetPath);
+                _logError($"Copy date mismatch: {sourcePaht} -> {targetPath}");
+                return false;
+
+            }
+            catch (Exception ex)
+            {
+                if (archived != null && File.Exists(archived))
+                    File.Move(archived, targetPath);
+                _logError($"Copy error: {ex.Message}\n{sourcePaht} -> {targetPath}");
+                return false;
+            }
         }
 
         //
