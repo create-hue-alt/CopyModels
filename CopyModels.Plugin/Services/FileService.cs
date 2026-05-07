@@ -132,12 +132,30 @@ namespace CopyModels.Plugin.Services
 
         public bool MarkReadOnly(string path)
         {
-            throw new NotImplementedException();
+            try
+            {
+                File.SetAttributes(path, File.GetAttributes(path) | FileAttributes.ReadOnly);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logWarning($"MarkReadOnly error: {ex.Message}\n{path}");
+                return false;
+            }
         }
 
         public bool MarkReadWrite(string path)
         {
-            throw new NotImplementedException();
+            try
+            {
+                File.SetAttributes(path, File.GetAttributes(path) & ~FileAttributes.ReadOnly);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logWarning($"MarkReadWrite error: {ex.Message}\n{path}");
+                return false;
+            }
         }
 
         //
