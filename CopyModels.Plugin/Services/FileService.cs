@@ -61,7 +61,7 @@ namespace CopyModels.Plugin.Services
                 var srcDate = GetModelDate(sourcePaht);
                 var tgtDate = GetModelDate(targetPath);
 
-                if (srcDate ==null || tgtDate == null || tgtDate >= srcDate)
+                if (srcDate == null || tgtDate == null || tgtDate >= srcDate)
                     return true;
 
                 // Дата не совпала - откатываем
@@ -90,7 +90,40 @@ namespace CopyModels.Plugin.Services
         /// </summary>
         public string ArchiveModel(string modelPath, string archiveFolder)
         {
-            throw new NotImplementedException();
+            if (IsRevitServer(modelPath))
+            {
+                _logInfo($"Archiving not supported for Revit Server: {modelPath}");
+                return null;
+            }
+            if (!File.Exists(modelPath))
+            {
+                _logInfo($": {modelPath}");
+                return null;
+            }
+
+            var modeDate = File.GetLastWriteTime(modelPath);
+            var dateStr = modeDate.ToString("yyyyMMdd_HHmmss");
+            var dayStr = modeDate.ToString("yyyyMMdd");
+
+            var fileNameNoExt = Path.GetFileNameWithoutExtension(modelPath);
+            var ext = Path.GetExtension(modelPath);
+
+            // Размещаем абсолютный/относительный путь архива
+            var folder = Path.IsPathRooted(archiveFolder)
+                ? archiveFolder
+                : Path.Combine(Path.GetDirectoryName(modelPath), archiveFolder);
+
+            folder = folder
+                .Replace("{MODEL_NAME}", fileNameNoExt)
+                .Replace("{MODEL_DATE}", dayStr);
+
+            var archiveName = $"{fileNameNoExt}_{dateStr}{ext}";
+            var archivePath = EnsureUniquePath(Path.Combine(folder, archiveName));
+
+            Directory.CreateDirectory(Path.GetDirectoryName(archivePath));
+            File.Move(modelPath, archivePath);
+            _logInfo($"Archived: {modelPath} -> {archivePath}");
+            return archivePath;
         }
 
         //
@@ -163,13 +196,13 @@ namespace CopyModels.Plugin.Services
         // P/Invoke 
         //
 
-        [DllImport("mpr.dll",CharSet = CharSet.Unicode)]
+        [DllImport("mpr.dll", CharSet = CharSet.Unicode)]
         private static extern int WNetAddConnection2(ref NETRESOURCE lpNetResource, string lpPassword, string lpUsername, int dwFlags);
-        
-        [DllImport("mpr.dll",  CharSet = CharSet.Unicode)]
+
+        [DllImport("mpr.dll", CharSet = CharSet.Unicode)]
         private static extern int WNetCancelConnection2(string lpName, int dwFlags, bool fForce);
-        
-        [DllImport("mpr.dll", CharSet=CharSet.Unicode)]
+
+        [DllImport("mpr.dll", CharSet = CharSet.Unicode)]
         private static extern int WNetGetConnection(string lpLocalName, StringBuilder lpRemoteName, ref int lpnLength);
 
         [StructLayout(LayoutKind.Sequential)]
