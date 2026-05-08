@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -168,7 +169,23 @@ namespace CopyModels.Plugin.Services
         /// </summary>
         public List<string> ReadFileServerModels(string folder, string extension, IEnumerable<string> exceptions = null)
         {
-            throw new NotImplementedException();
+            var exc = (exceptions ?? Enumerable.Empty<string>())
+                .Select(e => e.ToLower())
+                .ToList();
+
+            if (!Directory.Exists(folder))
+            {
+                _logWarning($"Path not found: {folder}");
+                return new List<string>();
+            }
+
+            var files = Directory.EnumerateFiles(folder, "*" + extension, SearchOption.AllDirectories)
+                .Where(f => !exc.Any(e => f.ToLower().Contains(e)))
+                .ToList();
+
+            _logInfo($"Found {files.Count()} models in {folder}");
+            return files;
+
         }
 
         /// <summary>
@@ -177,7 +194,12 @@ namespace CopyModels.Plugin.Services
         /// </summary>
         public List<string> ReadModels(string pathPattern, IEnumerable<string> exceptions = null)
         {
-            throw new NotImplementedException();
+            if (IsRevitServer(pathPattern))
+                return new List<string>();  // см. RevitServerService.ReadRevitServerModels
+
+            var folder = Path.GetDirectoryName(pathPattern) ?? pathPattern;
+            var extension = Path.GetExtension(pathPattern);
+            return ReadFileServerModels(folder, extension, exceptions);
         }
 
         //
@@ -186,7 +208,49 @@ namespace CopyModels.Plugin.Services
 
         public bool MapDrive(string driveLetter, string networkPath)
         {
-            throw new NotImplementedException();
+            _logInfo($"Map drive {driveLetter} -> {networkPath}");
+            
+            if (!Directory.Exists(networkPath))
+            {
+                _logError($"Network path not available: {networkPath}");
+                return false;
+            }
+
+            var currentPath = GetConnectionPath(driveLetter);
+            if (currentPath == networkPath)
+            {
+                _logInfo($"Drive {driveLetter} already mapped correctly.");
+                return true;
+            }
+
+            if (Directory.Exists(driveLetter + "\\"))
+            {
+                var discounnResult = WNetCancelConnection2(driveLetter, 1, true);
+                if (discounnResult != 0)
+                {
+                    _logError($"Disconnect drive error: {discounnResult}");
+                    return false;
+                }
+            }
+
+            var nr = new NETRESOURCE
+            {
+                dwType = 1,     // RESOURCETYPE_DISK
+                lpLocalName = driveLetter,
+                lpRemoteName = networkPath,
+                lpProvider = null
+            };
+
+            var result = WNetAddConnection2(ref nr, null, null, 1);
+            if (result == 0)
+            {
+                _logInfo($"Drive {driveLetter} mapped mapped {networkPath}.");
+                return true;
+            }
+
+            _logError($"WNetAddConnection2 error: {result}");
+            return false;
+            
         }
 
         //
