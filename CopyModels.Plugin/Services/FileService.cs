@@ -257,21 +257,39 @@ namespace CopyModels.Plugin.Services
         // Утилиты
         //
 
-        public static bool IsRevitServer(string path)
+        public static bool IsRevitServer(string path) =>
+            path != null && path.StartsWith("RSN", StringComparison.OrdinalIgnoreCase);
+        public void EnsureDirectory(string filePath)
         {
-            throw new NotImplementedException();
+            var dir = Path.GetDirectoryName(filePath);
+            if ( !string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+            {
+                Directory.CreateDirectory(dir);
+                _logInfo($"Directory created: {dir}");
+            }
         }
-        public void EnsureDirectory(string filePatn)
+        private static string EnsureUniquePath(string path)
         {
-            throw new NotImplementedException();
+            if (!File.Exists(path)) return path;
+            var dir = Path.GetDirectoryName(path);
+            var name = Path.GetFileNameWithoutExtension(path);
+            var ext = Path.GetExtension(path);
+            var i = 1;
+            string candidate;
+            do { candidate = Path.Combine(dir, $"{name}_{i++}{ext}"); }
+            while (File.Exists(candidate));
+            return candidate;
         }
-        public static string EnsureUniquePath(string path)
+        private string GetConnectionPath(string driverLetter)
         {
-            throw new NotImplementedException();
-        }
-        public string GetConnectionPath(string driverLetter)
-        {
-            throw new NotImplementedException();
+            try
+            {
+                var sb = new StringBuilder(260);
+                var length = 260;
+                WNetGetConnection(driverLetter.TrimEnd('\\'), sb, ref length);
+                return sb.ToString();
+            }
+            catch { return null; }
         }
 
         //
