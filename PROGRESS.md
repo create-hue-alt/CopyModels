@@ -13,7 +13,7 @@ CopyModels.sln
 │
 ├── CopyModels.Plugin               — требует RevitAPI.dll
 │   ├── Services/
-│   │   ├── FileService.cs          — копирование файлов, архив, маппинг диска (WinAPI)
+│   │   ├── FileService.cs          — копирование файлов, архив, маппинг диска (WinAPI) ✅
 │   │   ├── RevitServerService.cs   — HTTP запросы к Revit Server (RSN)
 │   │   ├── ModelService.cs         — открытие / экспорт / сохранение моделей Revit
 │   │   └── EventService.cs         — подписка на события, автозакрытие диалогов
@@ -48,7 +48,7 @@ CopyModels.sln
 | `settings_classes.py → ProjectSettings` | `Core/Models/ProjectSettings.cs` | ✅ |
 | `settings_classes.py → ModelSetting` | `Core/Models/ModelSetting.cs` | ✅ |
 | `read_setting_file()` | `Core/Settings/SettingsReader.cs` | ✅ |
-| `serverTools.py` | `Plugin/Services/FileService.cs` | ⏳ |
+| `serverTools.py` (FILE часть) | `Plugin/Services/FileService.cs` | ✅ |
 | `serverTools.py` (RSN часть) | `Plugin/Services/RevitServerService.cs` | ⏳ |
 | `modelTools.py` | `Plugin/Services/ModelService.cs` | ⏳ |
 | `eventsTools.py` | `Plugin/Services/EventService.cs` | ⏳ |
@@ -70,10 +70,10 @@ CopyModels.sln
 - [x] 6 проверок (assertions) — все пройдены ✅
 
 ### Plugin/Services ⏳
-- [ ] `FileService.cs`
-- [ ] `RevitServerService.cs`
-- [ ] `ModelService.cs`
-- [ ] `EventService.cs`
+- [x] `FileService.cs` — копирование файлов, архив, маппинг диска ✅
+- [ ] `RevitServerService.cs` — HTTP запросы к Revit Server
+- [ ] `ModelService.cs` — открытие / экспорт / сохранение моделей
+- [ ] `EventService.cs` — подавление диалогов Revit
 
 ### Plugin ⏳
 - [ ] `CopyModelsCommand.cs`
@@ -213,6 +213,105 @@ CopyModels.sln
 
 ---
 
+### Сессия 5 — FileService.cs ✅
+
+**Дата:** 10.05.2026
+
+**Что сделали:**
+- Написали полный `FileService.cs` — все операции с файловой системой
+- Исправили опечатки и логические ошибки в откатывании архива
+- Добавили правильное использование UTC времени для дат
+- Реализовали маппинг сетевых дисков через Windows API
+- Уточнили разделение ответственности между сервисами
+
+**Разобранные концепции:**
+
+| Концепция | Суть |
+|---|---|
+| `LastWriteTimeUtc` вместо `LastWriteTime` | Всегда UTC, не зависит от локального времени машины |
+| `File.Move(src, dst, overwrite: true)` | Перемещение файла с опцией перезаписи |
+| `EnsureUniquePath()` | Проверка уникальности пути — добавляет `_1`, `_2` если файл существует |
+| `Path.IsPathRooted()` | Проверка абсолютности пути |
+| Плейсхолдеры архива | `{MODEL_NAME}` и `{MODEL_DATE}` в пути архива |
+| P/Invoke и DllImport | Вызов функций Windows API из C# (mpr.dll) |
+| NETRESOURCE структура | Полное описание сетевого ресурса для WNetAddConnection2 |
+| Нормализация driveLetter | `TrimEnd('\\', ':') + ":"` для единообразия |
+
+**Ключевое решение — разделение ответственности (см. раздел ниже):**
+- `FileService` — ТОЛЬКО операции с файлами
+- `RevitServerService` — ТОЛЬКО операции с Revit Server
+- `ModelService` — выбирает нужный сервис по типу пути
+
+**Исправленные ошибки:**
+- ✅ `logWarninf` → `logWarning`
+- ✅ `CopyFail` → `CopyFile`
+- ✅ `sourcePaht` → `sourcePath` (везде)
+- ✅ Логика откатывания архива в `CopyFile`
+- ✅ `:Nothing to archive:` → `Nothing to archive:`
+- ✅ `archiveFolder` → `archiveTemplate`
+- ✅ `discounnResult` → `disconnectResult`
+- ✅ `LastWriteTime` → `LastWriteTimeUtc`
+- ✅ Полная структура `NETRESOURCE` с dwScope, dwDisplayType, dwUsage
+- ✅ Нормализация `driveLetter` в `MapDrive()`
+
+**Добавлено в код:**
+- XML-документация `/// <summary>` для всех public методов
+- Детальные комментарии в P/Invoke декларациях
+- Логирование с полной информацией об ошибках
+- Try-catch блоки в критических методах
+
+**Следующий шаг:**
+- Написать `RevitServerService.cs` — HTTP запросы к Revit Server
+- Затем `ModelService.cs` — высокоуровневая логика выбора алгоритма
+
+---
+
+## Разделение ответственности между сервисами
+
+Это ключевое архитектурное решение, принятое в сессии 5.
+
+**Почему разделили:**
+- В Python весь код в файле `serverTools.py`, функции выбирают алгоритм по типу пути
+- В C# выделили отдельные классы для разных источников (файлы vs Revit Server)
+- `ModelService` — фасад, который выбирает нужный сервис в зависимости от пути
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ ModelService (ТОЧКА ВХОДА)                                      │
+│ ├─ GetModelDate(anyPath)     ← проверяет тип пути              │
+│ ├─ CopyModel(source, target) ← выбирает алгоритм               │
+│ ├─ ReadModels(path)          ← выбирает алгоритм               │
+│ └─ Зависит от FileService + RevitServerService                 │
+│                                                                  │
+│  ┌──────────────────┐          ┌──────────────────────────┐    │
+│  │ FileService      │          │ RevitServerService       │    │
+│  │ (ФАЙЛЫ)          │          │ (REVIT SERVER / RSN)     │    │
+│  ├─ GetModelDate()  │          ├─ GetModelDate()          │    │
+│  ├─ CopyFile()      │          ├─ ReadRevitServerModels() │    │
+│  ├─ ArchiveModel()  │          ├─ RevitServerCopy()       │    │
+│  ├─ MarkReadWrite() │          ├─ RevitServerDownload()   │    │
+│  ├─ ReadFileServerModels() │   └─ HTTP REST запросы      │    │
+│  └─ MapDrive()      │                                       │    │
+│     (Windows API)   │                                       │    │
+└─────────────────────────────────────────────────────────────────┘
+
+FilePath: P:\Projects\Model.rvt        → FileService
+RSN Path: RSN://server/folder/Model.rvt → RevitServerService
+```
+
+**Метод выбора в ModelService.GetModelDate():**
+```csharp
+public double? GetModelDate(string path)
+{
+    if (FileService.IsRevitServer(path))
+        return _revitServerService.GetModelDate(path);
+    else
+        return _fileService.GetModelDate(path);
+}
+```
+
+---
+
 ## Вопросы и решения
 
 | Вопрос | Решение |
@@ -224,6 +323,8 @@ CopyModels.sln
 | Выравнивание колонками в VS? | Расширение Align Assignments, но не критично |
 | Codeium конфликт с VS? | Отключить `Tools → Options → IntelliCode → C# whole line completions` |
 | Как тестировать Core без Revit? | Консольное приложение — зависит только от Core и Newtonsoft.Json |
+| Почему CopyModel в ModelService, а не FileService? | Потому что CopyModel выбирает алгоритм — это высокоуровневая логика |
+| Где GetRevitServerDate? | В RevitServerService, не в FileService — каждый сервис обрабатывает свой тип пути |
 
 ---
 
@@ -233,3 +334,5 @@ CopyModels.sln
 - [Revit API Forum](https://forums.autodesk.com/t5/revit-api-forum/bd-p/160)
 - [MVVM паттерн](https://learn.microsoft.com/ru-ru/dotnet/architecture/maui/mvvm)
 - [Newtonsoft.Json документация](https://www.newtonsoft.com/json/help/html/Introduction.htm)
+- [P/Invoke и DllImport](https://learn.microsoft.com/en-us/dotnet/standard/native-interop/pinvoke)
+- [Windows API mpr.dll](https://learn.microsoft.com/en-us/windows/win32/api/winnetwk/nf-winnetwk-wnetaddconnection2w)

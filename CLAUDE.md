@@ -23,8 +23,8 @@ CopyModels.sln
 │
 ├── CopyModels.Plugin              — требует RevitAPI.dll ⏳
 │   ├── Services/
-│   │   ├── FileService.cs         (следующий)
-│   │   ├── RevitServerService.cs
+│   │   ├── FileService.cs         ✅ готов
+│   │   ├── RevitServerService.cs  (следующий)
 │   │   ├── ModelService.cs
 │   │   └── EventService.cs
 │   └── CopyModelsCommand.cs
@@ -42,20 +42,22 @@ CopyModels.sln
 **Главное правило:**
 "Этот код скомпилируется без RevitAPI.dll?" → Core, иначе → Plugin
 
-## Текущий статус (сессия 4)
+## Текущий статус (сессия 5)
 
 ### ✅ Сделано
-1. **ProjectSettings.cs** — все 30+ полей + конструктор с парсингом JSON
-2. **ModelSetting.cs** — данные модели + логика сравнения дат
-3. **SettingsReader.cs** — чтение JSON конфигов с парсингом структуры
-4. **CopyModels.ConsoleTest** — полное тестирование
-5. **6 проверок** — все пройдены ✅
+1. **ProjectSettings.cs** — все 30+ полей + конструктор с парсингом JSON ✅
+2. **ModelSetting.cs** — данные модели + логика сравнения дат ✅
+3. **SettingsReader.cs** — чтение JSON конфигов с парсингом структуры ✅
+4. **CopyModels.ConsoleTest** — полное тестирование ✅
+5. **FileService.cs** — копирование, архив, маппинг диска (Windows API) ✅
 
 ### ⏳ В очереди
-1. **FileService.cs** — копирование, архив, маппинг диска
-2. Остальные сервисы Plugin
-3. WPF UI (этап 2)
-4. Планировщик (этап 3)
+1. **RevitServerService.cs** — HTTP запросы к Revit Server REST API
+2. **ModelService.cs** — открытие / экспорт моделей Revit + выбор алгоритма
+3. **EventService.cs** — обработка диалогов и ошибок
+4. **CopyModelsCommand.cs** — IExternalCommand точка входа
+5. WPF UI (этап 2)
+6. Планировщик (этап 3)
 
 ## Стиль работы
 - Я пишу код сам, Claude проверяет и объясняет
@@ -69,6 +71,20 @@ CopyModels.sln
 - UI — WPF + MVVM (этап 2)
 - Сначала делаем рабочую версию без UI (TaskDialog как заглушка)
 - Тестирование Core через консольное приложение (без Revit)
+
+### Разделение ответственности между сервисами (сессия 5)
+
+**ЭТО КЛЮЧЕВОЕ РЕШЕНИЕ!** Подробный разбор в `PROGRESS.md` (раздел "Разделение ответственности между сервисами").
+
+**Короткая версия:**
+- `FileService` — ТОЛЬКО файловая система (P:\, C:\, и т.д.)
+- `RevitServerService` — ТОЛЬКО Revit Server (RSN://...)
+- `ModelService` — выбирает нужный сервис по типу пути
+
+**Почему:**
+- `FileService.GetModelDate(path)` возвращает `null` для RSN путей — это обрабатывается в `RevitServerService`
+- `CopyModel()` и `ReadModels()` будут в `ModelService`, а не в `FileService`
+- Каждый сервис обрабатывает свой тип пути, нет смешивания логики
 
 ## Зависимости
 - .NET Framework 4.8
