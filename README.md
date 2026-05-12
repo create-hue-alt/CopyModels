@@ -24,11 +24,11 @@
 
 ### C# версия — в разработке
 - [x] Архитектура проекта спроектирована
-- [x] `ProjectSettings.cs` — класс данных одного задания
-- [x] `ModelSetting.cs` — класс данных одной модели
+- [x] `ProjectSettings.cs` — класс данных одного задания ✅
+- [x] `ModelSetting.cs` — класс данных одной модели ✅
 - [x] `SettingsReader.cs` — чтение JSON конфигов ✅
 - [x] `CopyModels.ConsoleTest` — тестирование Core логики ✅
-- [ ] `FileService.cs` — копирование файлов, архив
+- [x] `FileService.cs` — копирование файлов, архив, маппинг диска ✅
 - [ ] `RevitServerService.cs` — работа с RSN через REST
 - [ ] `ModelService.cs` — открытие / экспорт моделей
 - [ ] `EventService.cs` — подавление диалогов Revit
@@ -49,11 +49,11 @@ CopyModels.sln
 │
 ├── CopyModels.Plugin         — требует RevitAPI.dll
 │   ├── Services/
-│   │   ├── FileService.cs
-│   │   ├── RevitServerService.cs
-│   │   ├── ModelService.cs
-│   │   └── EventService.cs
-│   └── CopyModelsCommand.cs
+│   │   ├── FileService.cs                ✅
+│   │   ├── RevitServerService.cs         ⏳
+│   │   ├── ModelService.cs               ⏳
+│   │   └── EventService.cs               ⏳
+│   └── CopyModelsCommand.cs              ⏳
 │
 ├── CopyModels.ConsoleTest    — тестирование Core (без Revit) ✅
 │   ├── Program.cs
@@ -85,13 +85,22 @@ CopyModels.sln
 | `serverTools.py` | Файловая система и Revit Server |
 | `eventsTools.py` | Обработка диалогов и ошибок |
 
-## Текущий статус (сессия 4)
+## Текущий статус (сессия 5)
 
-✅ **Core слой готов к использованию:**
-- Все классы данных написаны и протестированы
-- SettingsReader успешно читает JSON конфиги
-- Все 6 проверок пройдены
+### ✅ Plugin слой — FileService готов
 
-⏳ **Следующий этап:**
-- FileService.cs — копирование и архивирование файлов
-- Затем остальные сервисы Plugin
+Реализованы все операции с файловой системой:
+- Копирование файлов с проверкой дат
+- Архивирование с поддержкой плейсхолдеров
+- Управление правами доступа (ReadOnly/ReadWrite)
+- Маппинг сетевых дисков (Windows API)
+- Поиск моделей рекурсивно с исключениями
+
+### ⏳ Следующие этапы
+
+1. **RevitServerService.cs** — HTTP запросы к Revit Server REST API
+2. **ModelService.cs** — высокоуровневая логика (выбор алгоритма)
+3. **EventService.cs** — подавление диалогов Revit
+4. **CopyModelsCommand.cs** — точка входа плагина
+5. **WPF интерфейс** (этап 2) — выбор заданий и форматов экспорта
+6. **Планировщик** (этап 3) — Windows Task Scheduler интеграция
