@@ -9,6 +9,7 @@ namespace CopyModels.Plugin.Services
 {
     /// <summary>
     /// Работа с файловой системой и Revit Server.
+    /// Копирование файлов, архивирование, маппинг сетевых дисков.
     /// </summary>
     internal class FileService
     {
@@ -18,11 +19,11 @@ namespace CopyModels.Plugin.Services
 
         public FileService(
             Action<string> logInfo = null,
-            Action<string> logWarninf = null,
+            Action<string> logWarning = null,
             Action<string> logError = null)
         {
             _logInfo = logInfo ?? (_ => { });
-            _logWarning = logWarninf ?? (_ => { });
+            _logWarning = logWarning ?? (_ => { });
             _logError = logError ?? (_ => { });
         }
 
@@ -40,42 +41,51 @@ namespace CopyModels.Plugin.Services
             if (IsRevitServer(path)) return null;
             if (!File.Exists(path)) return null;
 
-            return (double)((DateTimeOffset)File.GetLastWriteTimeUtc(path)).ToUnixTimeSeconds();
+            var fileInfo = new FileInfo(path);
+            return (double)((DateTimeOffset)fileInfo.LastWriteTimeUtc).ToUnixTimeSeconds();
         }
 
         //
         // Копирование файлов
         //
 
-        /// <summary>Копирует файл с проверкой дат. Архивирует существующую цель если указана папка.</summary>
-        public bool CopyFail(string sourcePaht, string targetPath, string archiveFolder = null)
+        /// <summary>
+        /// Копирует файл с проверкой дат.
+        /// Если целевой файл существует и указан archiveTemplate, архивирует его перед копированием.
+        /// </summary>
+        public bool CopyFile(string sourcePath, string targetPath, string archiveTemplate = null)
         {
             string archived = null;
             try
             {
-                if (archiveFolder != null)
-                    archived = ArchiveModel(targetPath, archiveFolder);
+                // Архивируем существующий целевой файл если нужно
+                if (archiveTemplate != null)
+                    archived = ArchiveModel(targetPath, archiveTemplate);
 
+                // Копируем файл
                 EnsureDirectory(targetPath);
-                File.Copy(sourcePaht, targetPath, overwrite: true);
+                File.Copy(sourcePath, targetPath, overwrite: true);
 
-                var srcDate = GetModelDate(sourcePaht);
+                // Проверяем даты
+                var srcDate = GetModelDate(sourcePath);
                 var tgtDate = GetModelDate(targetPath);
 
-                if (srcDate == null || tgtDate == null || tgtDate >= srcDate)
+                // Если дата цели >= даты источника, то копироание прошло успешно
+                if (tgtDate != null && srcDate != null && tgtDate >= srcDate)
                     return true;
 
-                // Дата не совпала - откатываем
-                if (archived != null) File.Move(sourcePaht, targetPath);
-                _logError($"Copy date mismatch: {sourcePaht} -> {targetPath}");
+                // Дата не совпала - откатываем архив назад
+                if (archived != null) File.Move(archived, targetPath);
+                _logError($"Copy failed: target date mismatch\nSource: {sourcePath} (date: {srcDate})\nTarget: {targetPath} (date: {tgtDate})");
                 return false;
 
             }
             catch (Exception ex)
             {
+                // В случае ошибки откатываем архив
                 if (archived != null && File.Exists(archived))
                     File.Move(archived, targetPath);
-                _logError($"Copy error: {ex.Message}\n{sourcePaht} -> {targetPath}");
+                _logError($"Copy error: {ex.Message}\nSource: {sourcePath}\nTarget: {targetPath}");
                 return false;
             }
         }
@@ -89,7 +99,7 @@ namespace CopyModels.Plugin.Services
         /// Поддерживает плейсхолдер {MODEL_NAME} и {MODEL_DATE} в пути архива.
         /// Возвращает путь к архивному файлу или null.
         /// </summary>
-        public string ArchiveModel(string modelPath, string archiveFolder)
+        public string ArchiveModel(string modelPath, string archiveTemplate)
         {
             if (IsRevitServer(modelPath))
             {
@@ -98,7 +108,7 @@ namespace CopyModels.Plugin.Services
             }
             if (!File.Exists(modelPath))
             {
-                _logInfo($": {modelPath}");
+                _logInfo($"Nothing to archive: {modelPath}");
                 return null;
             }
 
@@ -110,9 +120,9 @@ namespace CopyModels.Plugin.Services
             var ext = Path.GetExtension(modelPath);
 
             // Размещаем абсолютный/относительный путь архива
-            var folder = Path.IsPathRooted(archiveFolder)
-                ? archiveFolder
-                : Path.Combine(Path.GetDirectoryName(modelPath), archiveFolder);
+            var folder = Path.IsPathRooted(archiveTemplate)
+                ? archiveTemplate
+                : Path.Combine(Path.GetDirectoryName(modelPath), archiveTemplate);
 
             folder = folder
                 .Replace("{MODEL_NAME}", fileNameNoExt)
@@ -131,6 +141,7 @@ namespace CopyModels.Plugin.Services
         // Права доступа
         //
 
+        /// <summary>Устанавливает файл в режим только чтение.</summary>
         public bool MarkReadOnly(string path)
         {
             try
@@ -145,6 +156,7 @@ namespace CopyModels.Plugin.Services
             }
         }
 
+        /// <summary>Устанавливает файл в режим чтение-запись.</summary>
         public bool MarkReadWrite(string path)
         {
             try
@@ -179,6 +191,11 @@ namespace CopyModels.Plugin.Services
                 return new List<string>();
             }
 
+            if (string.IsNullOrEmpty(extension))
+            {
+                extension = "*";
+            }
+            
             var files = Directory.EnumerateFiles(folder, "*" + extension, SearchOption.AllDirectories)
                 .Where(f => !exc.Any(e => f.ToLower().Contains(e)))
                 .ToList();
@@ -206,9 +223,9 @@ namespace CopyModels.Plugin.Services
         // Маппинг сетевого диска (Windows API)
         //
 
-        public bool MapDrive(string driveLetter, string networkPath)
+        public bool MapDrive(string driverLetter, string networkPath)
         {
-            _logInfo($"Map drive {driveLetter} -> {networkPath}");
+            _logInfo($"Map drive {driverLetter} -> {networkPath}");
             
             if (!Directory.Exists(networkPath))
             {
@@ -216,27 +233,35 @@ namespace CopyModels.Plugin.Services
                 return false;
             }
 
-            var currentPath = GetConnectionPath(driveLetter);
+            // Нормализуем букву диска
+            var driverLetterNorm = driverLetter.TrimEnd('\\', ':') + ":";
+            
+            // Проверяем текущие подключение
+            var currentPath = GetConnectionPath(driverLetterNorm);
             if (currentPath == networkPath)
             {
-                _logInfo($"Drive {driveLetter} already mapped correctly.");
+                _logInfo($"Drive {driverLetterNorm} already mapped correctly.");
                 return true;
             }
-
-            if (Directory.Exists(driveLetter + "\\"))
+                        
+            if (Directory.Exists(driverLetterNorm + "\\"))
             {
-                var discounnResult = WNetCancelConnection2(driveLetter, 1, true);
-                if (discounnResult != 0)
+                var disconnectResult = WNetCancelConnection2(driverLetter, 1, true);
+                if (disconnectResult != 0)
                 {
-                    _logError($"Disconnect drive error: {discounnResult}");
+                    _logError($"Disconnect drive error: {disconnectResult}");
                     return false;
                 }
             }
 
+            // Подключаем диск к новому пути
             var nr = new NETRESOURCE
             {
-                dwType = 1,     // RESOURCETYPE_DISK
-                lpLocalName = driveLetter,
+                dwScope = 0,        // RESOURCE_GLOBALNET
+                dwType = 1,         // RESOURCETYPE_DISK
+                dwDisplayType = 3,  // RESOURCEDISPLAYTYPE_SHARE
+                dwUsage = 1,        // RESOURCEUSAGE_CONNECTABLE
+                lpLocalName = driverLetterNorm,
                 lpRemoteName = networkPath,
                 lpProvider = null
             };
@@ -244,7 +269,7 @@ namespace CopyModels.Plugin.Services
             var result = WNetAddConnection2(ref nr, null, null, 1);
             if (result == 0)
             {
-                _logInfo($"Drive {driveLetter} mapped mapped {networkPath}.");
+                _logInfo($"Drive {driverLetter} mapped mapped {networkPath}.");
                 return true;
             }
 
@@ -257,8 +282,11 @@ namespace CopyModels.Plugin.Services
         // Утилиты
         //
 
+        /// <summary>Проверяет, является ли путь адресом Revit Server (начинается с RSN).</summary>
         public static bool IsRevitServer(string path) =>
             path != null && path.StartsWith("RSN", StringComparison.OrdinalIgnoreCase);
+        
+        /// <summary>Создаёт директорию для файла, если она не существует.</summary>
         public void EnsureDirectory(string filePath)
         {
             var dir = Path.GetDirectoryName(filePath);
@@ -296,26 +324,30 @@ namespace CopyModels.Plugin.Services
         // P/Invoke 
         //
 
+        /// <summary>Подключает сетевой ресурс к локальному имени (букве диска).</summary>
         [DllImport("mpr.dll", CharSet = CharSet.Unicode)]
         private static extern int WNetAddConnection2(ref NETRESOURCE lpNetResource, string lpPassword, string lpUsername, int dwFlags);
 
+        /// <summary>Отключает подключение к сетевому ресурсу.</summary>
         [DllImport("mpr.dll", CharSet = CharSet.Unicode)]
         private static extern int WNetCancelConnection2(string lpName, int dwFlags, bool fForce);
 
+        /// <summary>Получает сетевой путь для подключённого локального имени (буквы диска).</summary>
         [DllImport("mpr.dll", CharSet = CharSet.Unicode)]
         private static extern int WNetGetConnection(string lpLocalName, StringBuilder lpRemoteName, ref int lpnLength);
 
+        /// <summary>Структура для описания сетевого ресурса (используется в WNetAddConnection2).</summary>
         [StructLayout(LayoutKind.Sequential)]
         private struct NETRESOURCE
         {
-            public int dwScope;
-            public int dwType;
-            public int dwDisplayType;
-            public int dwUsage;
-            public string lpLocalName;
-            public string lpRemoteName;
-            public string lpComment;
-            public string lpProvider;
+            public int dwScope;             // RESOURCE_GLOBALNET
+            public int dwType;              // RESOURCETYPE_DISK
+            public int dwDisplayType;       // RESOURCEDISPLAYTYPE_SHARE
+            public int dwUsage;             // RESOURCEUSAGE_CONNECTABLE
+            public string lpLocalName;      // буква диска (Z:, Y:)
+            public string lpRemoteName;     // сетевой путь (\\server\share)
+            public string lpComment;        // комментарий
+            public string lpProvider;       // провайдер
         }
     }
 }
