@@ -57,7 +57,13 @@ namespace CopyModels.Plugin.Services
         /// <summary>Возвращает дату последнего изменения модели а Revit Server (Unix-секунды)</summary>
         public double? GetModelDate(string rsnPath)
         {
-            throw new NotImplementedException();
+            rsnPath = rsnPath.Replace("\\", "/");
+            var server = ExtractServer(rsnPath);
+            var rsn = $"RSN://{server}/";
+            var baseUrl = BuildBaseUrl(server);
+            var modelForRequest = rsnPath.Substring(rsn.Length).Replace("/", "|");
+
+            return RevitServerData(baseUrl, rsn, modelForRequest);
         }
 
         /// <summary>
