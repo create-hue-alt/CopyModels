@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 
 namespace CopyModels.Plugin.Services
@@ -72,7 +73,51 @@ namespace CopyModels.Plugin.Services
         /// </summary>
         public bool CopyOnRevitServer(string sourcePath, string targetPath, bool overwrite = true)
         {
-            throw new NotImplementedException();
+            sourcePath = sourcePath.Replace("\\", "/");
+            targetPath = targetPath.Replace("\\", "/");
+
+            var srcServer = ExtractServer(sourcePath);
+            var tgtServer = ExtractServer(targetPath);
+
+            if (!srcServer.Equals(tgtServer, StringComparison.OrdinalIgnoreCase))
+            {
+                _logError($"Cross-server copy is not supported: {sourcePath} -> {targetPath}");
+                return false;
+            }
+            
+            try
+            {
+                var baseUrl = BuildBaseUrl(srcServer);
+                var rsn = $"RSN://{srcServer}/";
+                
+                var srcModel = sourcePath.Substring(rsn.Length).Replace("/", "|");
+                var tgtModel = targetPath.Substring(rsn.Length).Replace("/", "|");
+                var replace = overwrite ? "true" : "false";
+
+                var url = $"{baseUrl}{srcModel}?destinationObjectPath={tgtModel}&pasteAction=Copy&replaceExisting={replace}";
+
+                var request = (HttpWebRequest)WebRequest.Create(url);
+                request.Method = "POST";
+                request.ContentLength = 0;
+                AddRevitSeverHeaders(request);
+
+                using (var response = request.GetResponse())
+                using (new StreamReader(response.GetResponseStream()!)) { }
+
+                var srcDate = GetModelDate(sourcePath);
+                var tgtDate = GetModelDate(targetPath);
+
+                if (srcDate != null && tgtDate != null && tgtDate >= srcDate)
+                    return true;
+
+                _logError($"$RSN copy date mismatch: {sourcePath} -> {targetPath}");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _logError($"RevitServer CopyModel error: {ex.Message}");
+                return false;
+            }
         }
 
         // 
