@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -20,14 +21,14 @@ namespace CopyModels.Plugin.Services
 
         public RevitServerService(
             string revitVersion,
-            Action<string> logInfo = null, 
-            Action<string> logWarning = null, 
+            Action<string> logInfo = null,
+            Action<string> logWarning = null,
             Action<string> logError = null)
         {
             _revitVersion = revitVersion;
-            _logInfo = logInfo          ?? (_ => { });
-            _logWarning = logWarning    ?? (_ => { });
-            _logError= logError         ?? (_ => { });
+            _logInfo = logInfo ?? (_ => { });
+            _logWarning = logWarning ?? (_ => { });
+            _logError = logError ?? (_ => { });
         }
 
         //
@@ -38,7 +39,7 @@ namespace CopyModels.Plugin.Services
         /// Рекурсивно возвращает все RSN-пути моделей в указанной папке RSN.
         /// <paramref name="rsnFolderPath"/> - например RSN://server/ProjectFolder
         /// </summary>
-        
+
         public List<string> ReadrRevitServerModels(string rsnFolderPath)
         {
             rsnFolderPath = rsnFolderPath.Replace("\\", "/");
@@ -84,12 +85,12 @@ namespace CopyModels.Plugin.Services
                 _logError($"Cross-server copy is not supported: {sourcePath} -> {targetPath}");
                 return false;
             }
-            
+
             try
             {
                 var baseUrl = BuildBaseUrl(srcServer);
                 var rsn = $"RSN://{srcServer}/";
-                
+
                 var srcModel = sourcePath.Substring(rsn.Length).Replace("/", "|");
                 var tgtModel = targetPath.Substring(rsn.Length).Replace("/", "|");
                 var replace = overwrite ? "true" : "false";
@@ -126,7 +127,43 @@ namespace CopyModels.Plugin.Services
 
         private List<string> RevitServerContent(string baseUrl, string rsn, string folder)
         {
-            throw new NotImplementedException();
+            var fileList = new List<string>();
+            var url = $"{baseUrl}{folder}/contents";
+
+            try
+            {
+                var request = (HttpWebRequest)WebRequest.Create(url);
+                request.Method = "GET";
+                AddRevitSeverHeaders(request);
+
+                using (var response = request.GetResponse())
+                using (var reader = new StreamReader(response.GetResponseStream()))
+                {
+                    var json = JObject.Parse(reader.ReadToEnd());
+
+                    foreach (var file in json["Models"])
+                    {
+                        var link = folder == "|"
+                            ? "/" + file["Name"].Value<string>()
+                            : folder.Replace("|", "/") + "/" + file["Name"].Value<string>();
+                        fileList.Add(rsn + link);
+                    }
+
+                    foreach (var sub in json["Folders"])
+                    {
+                        var subFolder = folder == "|"
+                            ? sub["Name"].Value<string>()
+                            : folder + "|" + sub["Name"].Value<string>();
+
+                        fileList.AddRange(RevitServerContent(baseUrl, rsn, subFolder));
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logError($"RevitServer Content error for {url}: {ex.Message}");
+            }
+            return fileList;
         }
 
         private double? RevitServerData(string baseUrl, string rsn, string model)
