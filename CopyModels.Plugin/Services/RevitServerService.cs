@@ -1,5 +1,4 @@
-﻿using Autodesk.Revit.DB.Architecture;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Net;
 
@@ -41,7 +40,18 @@ namespace CopyModels.Plugin.Services
         
         public List<string> ReadrRevitServerModels(string rsnFolderPath)
         {
-            throw new NotImplementedException();
+            rsnFolderPath = rsnFolderPath.Replace("\\", "/");
+            var server = ExtractServer(rsnFolderPath);
+            var rsn = $"RSN://{server}/";
+            var baseUrl = BuildBaseUrl(server);
+
+            var folder = rsnFolderPath.Substring(rsn.Length);
+            var folderForRequest = folder.Replace("/", "|");
+            if (string.IsNullOrEmpty(folderForRequest)) folderForRequest = "|";
+
+            var models = RevitServerContent(baseUrl, rsn, folderForRequest);
+            _logInfo($"Found {models.Count} models on RSN {rsnFolderPath}");
+            return models;
         }
 
         /// <summary>Возвращает дату последнего изменения модели а Revit Server (Unix-секунды)</summary>
