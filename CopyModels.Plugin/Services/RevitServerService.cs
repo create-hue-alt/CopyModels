@@ -192,19 +192,21 @@ namespace CopyModels.Plugin.Services
             }
         }
 
-        private string BuildBaseUrl(string server)
-        {
-            throw new NotImplementedException();
-        }
+        private string BuildBaseUrl(string server) =>
+            $"http://{server}/RevitServerAdminRESTService{_revitVersion}/AdminRESTService.svc/";
 
         private static string ExtractServer(string rsnPath)
         {
-            throw new NotImplementedException();
+            // RSN://servername/...
+            var parts = rsnPath.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
+            return parts.Length >= 2 ? parts[1] : parts[0];
         }
 
         private static void AddRevitSeverHeaders(HttpWebRequest request)
         {
-            throw new NotImplementedException();
+            request.Headers.Add("User-Name", Environment.UserName);
+            request.Headers.Add("User-Machine-Name", Environment.MachineName);
+            request.Headers.Add("Operation-GUID", Guid.NewGuid().ToString());
         }
     }
 }
