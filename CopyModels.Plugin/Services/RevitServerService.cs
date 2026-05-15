@@ -103,7 +103,7 @@ namespace CopyModels.Plugin.Services
                 AddRevitSeverHeaders(request);
 
                 using (var response = request.GetResponse())
-                using (new StreamReader(response.GetResponseStream()!)) { }
+                using (new StreamReader(response.GetResponseStream())) { }
 
                 var srcDate = GetModelDate(sourcePath);
                 var tgtDate = GetModelDate(targetPath);
@@ -168,7 +168,28 @@ namespace CopyModels.Plugin.Services
 
         private double? RevitServerData(string baseUrl, string rsn, string model)
         {
-            throw new NotImplementedException();
+            try
+            {
+                var url = $"{baseUrl}{model.Replace(rsn,"").Replace("/", "|")}/modelInfo";
+                var request = (HttpWebRequest)WebRequest.Create(url);
+                request.Method = "GET";
+                AddRevitSeverHeaders(request);
+
+                using (var response = request.GetResponse())
+                using (var reader = new StreamReader(response.GetResponseStream()))
+                {
+                    var json = JObject.Parse(reader.ReadToEnd());
+
+                    var raw = json["DateModifiled"].Value<string>()
+                        .Replace("/Date(", "").Replace(")/", "");
+                    return double.Parse(raw) / 1000.0;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logWarning($"RevitServer date error: {ex.Message}");
+                return null;
+            }
         }
 
         private string BuildBaseUrl(string server)
@@ -183,7 +204,7 @@ namespace CopyModels.Plugin.Services
 
         private static void AddRevitSeverHeaders(HttpWebRequest request)
         {
-            throw new NotImplementedException;
+            throw new NotImplementedException();
         }
     }
 }
