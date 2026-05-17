@@ -1,8 +1,7 @@
 ﻿using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Net;
+using System.Net.Http;
 
 namespace CopyModels.Plugin.Services
 {
@@ -15,6 +14,7 @@ namespace CopyModels.Plugin.Services
     internal class RevitServerService
     {
         private readonly string _revitVersion;
+        private readonly HttpClient _httpClient;
         private readonly Action<string> _logInfo;
         private readonly Action<string> _logWarning;
         private readonly Action<string> _logError;
@@ -29,6 +29,9 @@ namespace CopyModels.Plugin.Services
             _logInfo = logInfo ?? (_ => { });
             _logWarning = logWarning ?? (_ => { });
             _logError = logError ?? (_ => { });
+
+            _httpClient = new HttpClient();
+            _httpClient.Timeout = TimeSpan.FromSeconds(60);
         }
 
         //
@@ -40,7 +43,7 @@ namespace CopyModels.Plugin.Services
         /// <paramref name="rsnFolderPath"/> - например RSN://server/ProjectFolder
         /// </summary>
 
-        public List<string> ReadrRevitServerModels(string rsnFolderPath)
+        public List<string> ReadRevitServerModels(string rsnFolderPath)
         {
             rsnFolderPath = rsnFolderPath.Replace("\\", "/");
             var server = ExtractServer(rsnFolderPath);
@@ -65,7 +68,7 @@ namespace CopyModels.Plugin.Services
             var baseUrl = BuildBaseUrl(server);
             var modelForRequest = rsnPath.Substring(rsn.Length).Replace("/", "|");
 
-            return RevitServerData(baseUrl, rsn, modelForRequest);
+            return RevitServerData(baseUrl, modelForRequest);
         }
 
         /// <summary>
@@ -97,21 +100,22 @@ namespace CopyModels.Plugin.Services
 
                 var url = $"{baseUrl}{srcModel}?destinationObjectPath={tgtModel}&pasteAction=Copy&replaceExisting={replace}";
 
-                var request = (HttpWebRequest)WebRequest.Create(url);
-                request.Method = "POST";
-                request.ContentLength = 0;
-                AddRevitSeverHeaders(request);
+                using (var request = new HttpRequestMessage(HttpMethod.Post, url))
+                {
+                    AddRevitSeverHeaders(request);
+                    var response = _httpClient.SendAsync(request).Result;
 
-                using (var response = request.GetResponse())
-                using (new StreamReader(response.GetResponseStream())) { }
-
+                    if (!response.IsSuccessStatusCode)
+                        throw new Exception($"HTTP {response.StatusCode}");
+                }
+                
                 var srcDate = GetModelDate(sourcePath);
                 var tgtDate = GetModelDate(targetPath);
 
                 if (srcDate != null && tgtDate != null && tgtDate >= srcDate)
                     return true;
 
-                _logError($"$RSN copy date mismatch: {sourcePath} -> {targetPath}");
+                _logError($"RSN copy date mismatch: {sourcePath} -> {targetPath}");
                 return false;
             }
             catch (Exception ex)
@@ -124,7 +128,7 @@ namespace CopyModels.Plugin.Services
         // 
         // Внутренние методы
         // 
-
+                
         private List<string> RevitServerContent(string baseUrl, string rsn, string folder)
         {
             var fileList = new List<string>();
@@ -132,16 +136,18 @@ namespace CopyModels.Plugin.Services
 
             try
             {
-                var request = (HttpWebRequest)WebRequest.Create(url);
-                request.Method = "GET";
-                AddRevitSeverHeaders(request);
-
-                using (var response = request.GetResponse())
-                using (var reader = new StreamReader(response.GetResponseStream()))
+                using (var request = new HttpRequestMessage(HttpMethod.Get, url))
                 {
-                    var json = JObject.Parse(reader.ReadToEnd());
+                    AddRevitSeverHeaders(request);
 
-                    foreach (var file in json["Models"])
+                    var response = _httpClient.SendAsync(request).Result;
+
+                    if (!response.IsSuccessStatusCode)
+                        throw new Exception($"HTTP {response.StatusCode}");
+
+                    var json = JObject.Parse(response.Content.ReadAsStringAsync().Result);
+
+                    foreach (var file  in json["Models"])
                     {
                         var link = folder == "|"
                             ? "/" + file["Name"].Value<string>()
@@ -163,24 +169,28 @@ namespace CopyModels.Plugin.Services
             {
                 _logError($"RevitServer Content error for {url}: {ex.Message}");
             }
+            
             return fileList;
         }
 
-        private double? RevitServerData(string baseUrl, string rsn, string model)
+        private double? RevitServerData(string baseUrl, string model)
         {
             try
             {
-                var url = $"{baseUrl}{model.Replace(rsn,"").Replace("/", "|")}/modelInfo";
-                var request = (HttpWebRequest)WebRequest.Create(url);
-                request.Method = "GET";
-                AddRevitSeverHeaders(request);
+                var url = $"{baseUrl}{model}/modelInfo";
 
-                using (var response = request.GetResponse())
-                using (var reader = new StreamReader(response.GetResponseStream()))
+                using (var request = new HttpRequestMessage(HttpMethod.Get, url))
                 {
-                    var json = JObject.Parse(reader.ReadToEnd());
+                    AddRevitSeverHeaders(request);
 
-                    var raw = json["DateModifiled"].Value<string>()
+                    var response = _httpClient.SendAsync(request).Result;
+
+                    if (!response.IsSuccessStatusCode)
+                        throw new Exception($"HTTP {response.StatusCode}");
+
+                    var json = JObject.Parse(response.Content.ReadAsStringAsync().Result);
+
+                    var raw = json["DateModified"].Value<string>()
                         .Replace("/Date(", "").Replace(")/", "");
                     return double.Parse(raw) / 1000.0;
                 }
@@ -197,12 +207,12 @@ namespace CopyModels.Plugin.Services
 
         private static string ExtractServer(string rsnPath)
         {
-            // RSN://servername/...
-            var parts = rsnPath.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
-            return parts.Length >= 2 ? parts[1] : parts[0];
+            // RSN://servername/... → servername
+            var parts = rsnPath.Split(new[] { "/" }, StringSplitOptions.RemoveEmptyEntries);
+            return parts.Length >= 2 ? parts[1] : throw new ArgumentException($"Invalid RSN path: {rsnPath}");
         }
 
-        private static void AddRevitSeverHeaders(HttpWebRequest request)
+        private static void AddRevitSeverHeaders(HttpRequestMessage request)
         {
             request.Headers.Add("User-Name", Environment.UserName);
             request.Headers.Add("User-Machine-Name", Environment.MachineName);
