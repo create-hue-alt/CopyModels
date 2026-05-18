@@ -6,26 +6,27 @@
 CopyModels.sln
 ├── CopyModels.Core                 — бизнес-логика, компилируется БЕЗ Revit API
 │   ├── Models/
-│   │   ├── ProjectSettings.cs      — поля одного задания + парсинг JSON
-│   │   └── ModelSetting.cs         — поля одной модели + логика дат
+│   │   ├── ProjectSettings.cs      — поля одного задания + парсинг JSON ✅
+│   │   └── ModelSetting.cs         — поля одной модели + логика дат ✅
 │   └── Settings/
 │       └── SettingsReader.cs       — читает JSON файлы, создаёт ProjectSettings ✅
 │
 ├── CopyModels.Plugin               — требует RevitAPI.dll
 │   ├── Services/
 │   │   ├── FileService.cs          — копирование файлов, архив, маппинг диска (WinAPI) ✅
-│   │   ├── RevitServerService.cs   — HTTP запросы к Revit Server (RSN)
-│   │   ├── ModelService.cs         — открытие / экспорт / сохранение моделей Revit
-│   │   └── EventService.cs         — подписка на события, автозакрытие диалогов
-│   └── CopyModelsCommand.cs        — IExternalCommand, точка входа
+│   │   ├── RevitServerService.cs   — HTTP запросы к Revit Server (RSN) ✅
+│   │   ├── ModelService.cs         — открытие / экспорт / сохранение моделей Revit ⏳
+│   │   └── EventService.cs         — подписка на события, автозакрытие диалогов ⏳
+│   └── CopyModelsCommand.cs        — IExternalCommand, точка входа ⏳
 │
-├── CopyModels.ConsoleTest          — тестирование Core логики (без Revit)
+├── CopyModels.ConsoleTest          — тестирование Core логики (без Revit) ✅
 │   ├── Program.cs
 │   └── TestConfigs/                — JSON файлы для тестирования
 │       ├── Architecture.json
-│       └── Structure.json
+│       ├── Structure.json
+│       └── RealProject.json
 │
-└── CopyModels.UI                   — WPF интерфейс (этап 2)
+└── CopyModels.UI                   — WPF интерфейс (этап 2) ⏳
     ├── MainWindow.xaml
     └── ViewModels/
         └── MainViewModel.cs
@@ -49,7 +50,7 @@ CopyModels.sln
 | `settings_classes.py → ModelSetting` | `Core/Models/ModelSetting.cs` | ✅ |
 | `read_setting_file()` | `Core/Settings/SettingsReader.cs` | ✅ |
 | `serverTools.py` (FILE часть) | `Plugin/Services/FileService.cs` | ✅ |
-| `serverTools.py` (RSN часть) | `Plugin/Services/RevitServerService.cs` | ⏳ |
+| `serverTools.py` (RSN часть) | `Plugin/Services/RevitServerService.cs` | ✅ |
 | `modelTools.py` | `Plugin/Services/ModelService.cs` | ⏳ |
 | `eventsTools.py` | `Plugin/Services/EventService.cs` | ⏳ |
 | `script.py` (точка входа) | `Plugin/CopyModelsCommand.cs` | ⏳ |
@@ -69,9 +70,13 @@ CopyModels.sln
 - [x] Простые JSON конфиги для проверки
 - [x] 6 проверок (assertions) — все пройдены ✅
 
-### Plugin/Services ⏳
+### Plugin/Services ✅✅
 - [x] `FileService.cs` — копирование файлов, архив, маппинг диска ✅
-- [ ] `RevitServerService.cs` — HTTP запросы к Revit Server
+- [x] `RevitServerService.cs` — HTTP запросы к Revit Server ✅
+  - [x] HttpClient (синхронный, современный API)
+  - [x] ReadRevitServerModels() — рекурсивный обход папок
+  - [x] GetModelDate() — парсинг дат Revit Server
+  - [x] CopyOnRevitServer() — копирование между серверами
 - [ ] `ModelService.cs` — открытие / экспорт / сохранение моделей
 - [ ] `EventService.cs` — подавление диалогов Revit
 
@@ -262,13 +267,59 @@ CopyModels.sln
 
 **Следующий шаг:**
 - Написать `RevitServerService.cs` — HTTP запросы к Revit Server
-- Затем `ModelService.cs` — высокоуровневая логика выбора алгоритма
+
+---
+
+### Сессия 6 — HTTP запросы и RevitServerService.cs ✅
+
+**Дата:** 18.05.2026
+
+**Что сделали:**
+- Создали полный курс "HTTP запросы в C#" (11 документов)
+- Разобрались с асинхронностью в контексте проекта
+- Выяснили как работает progress bar с синхронным кодом
+- Переделали RevitServerService с WebRequest на HttpClient
+- Исправили все ошибки в коде
+
+**Главные вопросы которые решили:**
+
+| Вопрос | Ответ |
+|---|---|
+| Зачем нужна асинхронность в этом проекте? | **Не нужна!** Пользователь ждёт, Revit блокирует |
+| Как сделать progress bar без асинхронности? | Task.Run() для кода + Dispatcher.Invoke() для UI |
+| WebRequest или HttpClient? | HttpClient (современнее, встроен timeout, готов к async) |
+
+**Разобранные концепции:**
+
+| Концепция | Суть |
+|---|---|
+| HTTP GET запрос | `client.GetAsync(url).Result` |
+| HTTP POST запрос | `new HttpRequestMessage(HttpMethod.Post, url)` |
+| Headers в запросе | `request.Headers.Add("User-Name", ...)` |
+| JSON парсинг | `JObject.Parse(jsonString)` |
+| Дата Revit Server | `/Date(1715760420000)/` → Unix timestamp |
+| Рекурсия в REST API | Обход папок через `/contents`, рекурсивный вызов |
+| HttpClient timeout | `_httpClient.Timeout = TimeSpan.FromSeconds(60)` |
+| Синхронный HttpClient | `.Result` на `GetAsync()` и `ReadAsStringAsync()` |
+
+**Написан код RevitServerService.cs:**
+
+- `ReadRevitServerModels()` — рекурсивно читает все модели в папке RSN
+- `GetModelDate()` — получает дату последнего изменения модели
+- `CopyOnRevitServer()` — копирует модель между папками на одном Revit Server
+- Все методы с обработкой ошибок и логированием
+
+**Следующий шаг:**
+
+- Написать `ModelService.cs` — высокоуровневая логика выбора алгоритма
+- Затем `EventService.cs` — обработка диалогов Revit
+- Потом `CopyModelsCommand.cs` — точка входа плагина
 
 ---
 
 ## Разделение ответственности между сервисами
 
-Это ключевое архитектурное решение, принятое в сессии 5.
+Это ключевое архитектурное решение, принятое в сессии 5 и уточненное в сессии 6.
 
 **Почему разделили:**
 - В Python весь код в файле `serverTools.py`, функции выбирают алгоритм по типу пути
@@ -288,9 +339,9 @@ CopyModels.sln
 │  │ (ФАЙЛЫ)          │          │ (REVIT SERVER / RSN)     │    │
 │  ├─ GetModelDate()  │          ├─ GetModelDate()          │    │
 │  ├─ CopyFile()      │          ├─ ReadRevitServerModels() │    │
-│  ├─ ArchiveModel()  │          ├─ RevitServerCopy()       │    │
-│  ├─ MarkReadWrite() │          ├─ RevitServerDownload()   │    │
-│  ├─ ReadFileServerModels() │   └─ HTTP REST запросы      │    │
+│  ├─ ArchiveModel()  │          ├─ CopyOnRevitServer()     │    │
+│  ├─ MarkReadWrite() │          └─ HTTP REST запросы       │    │
+│  ├─ ReadFileServerModels() │                               │    │
 │  └─ MapDrive()      │                                       │    │
 │     (Windows API)   │                                       │    │
 └─────────────────────────────────────────────────────────────────┘
@@ -303,7 +354,7 @@ RSN Path: RSN://server/folder/Model.rvt → RevitServerService
 ```csharp
 public double? GetModelDate(string path)
 {
-    if (FileService.IsRevitServer(path))
+    if (path.StartsWith("RSN://", StringComparison.OrdinalIgnoreCase))
         return _revitServerService.GetModelDate(path);
     else
         return _fileService.GetModelDate(path);
@@ -320,8 +371,9 @@ public double? GetModelDate(string path)
 | Планировщик — как реализовать? | Windows Task Scheduler, управляется из UI |
 | UI паттерн? | MVVM — стандарт для WPF |
 | ModelService в Core или Plugin? | Plugin — он требует открытый Revit |
-| Выравнивание колонками в VS? | Расширение Align Assignments, но не критично |
-| Codeium конфликт с VS? | Отключить `Tools → Options → IntelliCode → C# whole line completions` |
+| Асинхронность нужна? | Нет! Пользователь ждёт, Revit блокирует |
+| Progress bar и синхронный код? | Task.Run() + Dispatcher.Invoke() |
+| WebRequest или HttpClient? | HttpClient (современнее, встроен timeout) |
 | Как тестировать Core без Revit? | Консольное приложение — зависит только от Core и Newtonsoft.Json |
 | Почему CopyModel в ModelService, а не FileService? | Потому что CopyModel выбирает алгоритм — это высокоуровневая логика |
 | Где GetRevitServerDate? | В RevitServerService, не в FileService — каждый сервис обрабатывает свой тип пути |
@@ -336,3 +388,5 @@ public double? GetModelDate(string path)
 - [Newtonsoft.Json документация](https://www.newtonsoft.com/json/help/html/Introduction.htm)
 - [P/Invoke и DllImport](https://learn.microsoft.com/en-us/dotnet/standard/native-interop/pinvoke)
 - [Windows API mpr.dll](https://learn.microsoft.com/en-us/windows/win32/api/winnetwk/nf-winnetwk-wnetaddconnection2w)
+- [HttpClient в C#](https://learn.microsoft.com/ru-ru/dotnet/api/system.net.http.httpclient)
+- [REST API тестирование](https://www.postman.com/)
