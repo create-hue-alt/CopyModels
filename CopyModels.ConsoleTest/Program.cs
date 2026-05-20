@@ -11,7 +11,7 @@ namespace CopyModels.ConsoleTest
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("=== CopyModels SettingsReader Тестирование (Реальные данные) ===\n");
+            Console.WriteLine("=== CopyModels SettingsReader Тестирование ===\n");
 
             try
             {
@@ -230,6 +230,16 @@ namespace CopyModels.ConsoleTest
                 {
                     Console.WriteLine($"   {project}: {allSettings[project].Count} заданий");
                 }
+
+                Console.WriteLine("\n" + new string('=', 50));
+                Console.WriteLine("Теперь запускаем тесты RevitServer:");
+                Console.WriteLine(new string ('=', 50) + "\n");
+
+                TestRevitServer.TestExtractServerMethod();
+                TestRevitServer.TestBuildUrlMethod();
+                TestRevitServer.TestLoggingCallbaks();
+                TestRevitServer.TestReadModelsFromRealServer();
+
             }
             catch (Exception ex)
             {

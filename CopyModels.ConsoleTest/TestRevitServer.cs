@@ -9,27 +9,10 @@ namespace CopyModels.ConsoleTest
 {
     internal class TestRevitServer
     {
-        static void Main(string[] args)
-        {
-            Console.WriteLine("=== RevitServerService Unit Tests ===\n");
-
-            try
-            {
-                // ТЕСТ 1: Парсинг RSN пути (без сетевого запроса)
-            }
-            catch (Exception ex)
-            {
-
-            }
-
-            Console.WriteLine("\n Нажмите любую клавишу для выхода...");
-            Console.ReadKey();
-        }
-
         /// <summary>
         /// ТЕСТ 1: Проверяем парсинг RSN пути
         /// </summary>
-        static void TestExtractServerMethod()
+        internal static void TestExtractServerMethod()
         {
             Console.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
             Console.WriteLine("ТЕСТ 1: Парсинг RSN пути");
@@ -69,7 +52,7 @@ namespace CopyModels.ConsoleTest
         /// <summary>
         /// ТЕСТ 2: Проверяем парсинг URL
         /// </summary>
-        static void TestBuildUrlMethod()
+        internal static void TestBuildUrlMethod()
         {
             Console.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
             Console.WriteLine("ТЕСТ 2: Построение URL для REST API");
@@ -90,7 +73,7 @@ namespace CopyModels.ConsoleTest
         /// <summary>
         /// ТЕСТ 3: Логирование callback-ов работает
         /// </summary>
-        static void TestLoggingCallbaks()
+        internal static void TestLoggingCallbaks()
         {
             Console.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
             Console.WriteLine("ТЕСТ 3: Логирование callback-ов");
@@ -113,7 +96,7 @@ namespace CopyModels.ConsoleTest
         /// <summary>
         /// ТЕСТ 4: Реальный запрос к Revit Server
         /// </summary>
-        static void TestReadModelsFromRealServer()
+        internal static void TestReadModelsFromRealServer()
         {
             Console.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
             Console.WriteLine("ТЕСТ 4: Чтение моделей с реального сервера");
