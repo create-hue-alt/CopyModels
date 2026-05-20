@@ -45,10 +45,31 @@ namespace CopyModels.ConsoleTest
                 "RSN://server-name/folder|subfolder|model.rvt"
             };
 
-            /// <summary>
-            /// ТЕСТ 2: Проверяем парсинг URL
-            /// </summary>
-            static void TestBuildUrlMethod()
+            foreach (var path in testPaths)
+            {
+                try
+                {
+                    // Используем рефлексию чтобы вызвать private
+                    var method = service.GetType()
+                        .GetMethod("ExtractServer",
+                            System.Reflection.BindingFlags.NonPublic |
+                            System.Reflection.BindingFlags.Static);
+
+                    var result = method?.Invoke(null, new object[] { path });
+                    Console.WriteLine($"✓ {path} -> {result}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"❌ {path} → ОШИБКА: {ex.InnerException?.Message}");
+                }
+            }
+            Console.WriteLine();
+        }
+
+        /// <summary>
+        /// ТЕСТ 2: Проверяем парсинг URL
+        /// </summary>
+        static void TestBuildUrlMethod()
         {
             throw new NotImplementedException();
         }
@@ -62,3 +83,4 @@ namespace CopyModels.ConsoleTest
         }
     }
 }
+

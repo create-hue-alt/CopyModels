@@ -11,7 +11,7 @@ namespace CopyModels.Plugin.Services
     ///
     /// Путь RSN имеет вид RSN://servername/folder/subfolder
     /// </summary>
-    internal class RevitServerService
+    public class RevitServerService
     {
         private readonly string _revitVersion;
         private readonly HttpClient _httpClient;
