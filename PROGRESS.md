@@ -20,7 +20,8 @@ CopyModels.sln
 │   └── CopyModelsCommand.cs        — IExternalCommand, точка входа ⏳
 │
 ├── CopyModels.ConsoleTest          — тестирование Core логики (без Revit) ✅
-│   ├── Program.cs
+│   ├── Program.cs                  — тесты SettingsReader
+│   ├── TestRevitServer.cs          — тесты RevitServerService (сессия 7)
 │   └── TestConfigs/                — JSON файлы для тестирования
 │       ├── Architecture.json
 │       ├── Structure.json
@@ -68,15 +69,17 @@ CopyModels.sln
 ### Core/Tests ✅
 - [x] `CopyModels.ConsoleTest` — консольное тестирование
 - [x] Простые JSON конфиги для проверки
-- [x] 6 проверок (assertions) — все пройдены ✅
+- [x] 9 проверок SettingsReader — все пройдены ✅
+- [x] 4 теста RevitServerService — все пройдены ✅ (сессия 7)
 
 ### Plugin/Services ✅✅
 - [x] `FileService.cs` — копирование файлов, архив, маппинг диска ✅
 - [x] `RevitServerService.cs` — HTTP запросы к Revit Server ✅
-  - [x] HttpClient (синхронный, современный API)
+  - [x] HttpClient (синхронный, встроен timeout)
   - [x] ReadRevitServerModels() — рекурсивный обход папок
-  - [x] GetModelDate() — парсинг дат Revit Server
-  - [x] CopyOnRevitServer() — копирование между серверами
+  - [x] GetModelDate() — парсинг `/Date(...)` формата
+  - [x] CopyOnRevitServer() — копирование на RSN
+  - [x] Полная обработка ошибок и логирование
 - [ ] `ModelService.cs` — открытие / экспорт / сохранение моделей
 - [ ] `EventService.cs` — подавление диалогов Revit
 
@@ -281,50 +284,44 @@ CopyModels.sln
 - Переделали RevitServerService с WebRequest на HttpClient
 - Исправили все ошибки в коде
 
-**Главные вопросы которые решили:**
-
-| Вопрос | Ответ |
-|---|---|
-| Зачем нужна асинхронность в этом проекте? | **Не нужна!** Пользователь ждёт, Revit блокирует |
-| Как сделать progress bar без асинхронности? | Task.Run() для кода + Dispatcher.Invoke() для UI |
-| WebRequest или HttpClient? | HttpClient (современнее, встроен timeout, готов к async) |
-
-**Разобранные концепции:**
-
-| Концепция | Суть |
-|---|---|
-| HTTP GET запрос | `client.GetAsync(url).Result` |
-| HTTP POST запрос | `new HttpRequestMessage(HttpMethod.Post, url)` |
-| Headers в запросе | `request.Headers.Add("User-Name", ...)` |
-| JSON парсинг | `JObject.Parse(jsonString)` |
-| Дата Revit Server | `/Date(1715760420000)/` → Unix timestamp |
-| Рекурсия в REST API | Обход папок через `/contents`, рекурсивный вызов |
-| HttpClient timeout | `_httpClient.Timeout = TimeSpan.FromSeconds(60)` |
-| Синхронный HttpClient | `.Result` на `GetAsync()` и `ReadAsStringAsync()` |
-
-**Написан код RevitServerService.cs:**
-
-- `ReadRevitServerModels()` — рекурсивно читает все модели в папке RSN
-- `GetModelDate()` — получает дату последнего изменения модели
-- `CopyOnRevitServer()` — копирует модель между папками на одном Revit Server
-- Все методы с обработкой ошибок и логированием
-
 **Следующий шаг:**
-
-- Написать `ModelService.cs` — высокоуровневая логика выбора алгоритма
-- Затем `EventService.cs` — обработка диалогов Revit
-- Потом `CopyModelsCommand.cs` — точка входа плагина
+- Написать `ModelService.cs` — высокоуровневая логика
 
 ---
 
+### Сессия 7 — Тестирование RevitServerService ✅ **[НОВОЕ]**
+
+**Дата:** 20.05.2026
+
+**Что сделали:**
+- Создали класс `TestRevitServer` в ConsoleTest проекте
+- Написали 4 теста для RevitServerService:
+  - **Тест 1:** ExtractServer — парсинг RSN пути ✅
+  - **Тест 2:** BuildBaseUrl — формирование REST API URL ✅
+  - **Тест 3:** Логирование callback-ов ✅
+  - **Тест 4:** Реальный запрос к Revit Server ✅
+- Все тесты успешно прошли
+- **Результат:** 13 моделей успешно прочитаны с реального сервера `RSN://k-2133.atptlp.local/20175_INARCTICA`
+
+**Проверки (Assertions):**
+- ✅ 3 дисциплины найдены
+- ✅ SettingsReader правильно парсит конфиги
+- ✅ RevitServerService корректно работает с REST API
+- ✅ Рекурсивный обход папок функционирует
+
+**Технические детали:**
+- Использована рефлексия для тестирования private методов
+- Callback-функции для логирования работают
+- HTTP запросы к реальному Revit Server успешны
+- Парсинг дат в формате Revit Server (`/Date(...)`) работает
+
+**Следующий шаг:**
+- Написать `ModelService.cs` — координатор между FileService и RevitServerService
+- Или сразу начать EventService для подавления диалогов Revit
+
 ## Разделение ответственности между сервисами
 
-Это ключевое архитектурное решение, принятое в сессии 5 и уточненное в сессии 6.
-
-**Почему разделили:**
-- В Python весь код в файле `serverTools.py`, функции выбирают алгоритм по типу пути
-- В C# выделили отдельные классы для разных источников (файлы vs Revit Server)
-- `ModelService` — фасад, который выбирает нужный сервис в зависимости от пути
+Это ключевое архитектурное решение, принятое в сессии 5.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -349,36 +346,6 @@ CopyModels.sln
 FilePath: P:\Projects\Model.rvt        → FileService
 RSN Path: RSN://server/folder/Model.rvt → RevitServerService
 ```
-
-**Метод выбора в ModelService.GetModelDate():**
-```csharp
-public double? GetModelDate(string path)
-{
-    if (path.StartsWith("RSN://", StringComparison.OrdinalIgnoreCase))
-        return _revitServerService.GetModelDate(path);
-    else
-        return _fileService.GetModelDate(path);
-}
-```
-
----
-
-## Вопросы и решения
-
-| Вопрос | Решение |
-|---|---|
-| Как хранить конфиги? | JSON файлы, тот же формат что в Python версии |
-| Планировщик — как реализовать? | Windows Task Scheduler, управляется из UI |
-| UI паттерн? | MVVM — стандарт для WPF |
-| ModelService в Core или Plugin? | Plugin — он требует открытый Revit |
-| Асинхронность нужна? | Нет! Пользователь ждёт, Revit блокирует |
-| Progress bar и синхронный код? | Task.Run() + Dispatcher.Invoke() |
-| WebRequest или HttpClient? | HttpClient (современнее, встроен timeout) |
-| Как тестировать Core без Revit? | Консольное приложение — зависит только от Core и Newtonsoft.Json |
-| Почему CopyModel в ModelService, а не FileService? | Потому что CopyModel выбирает алгоритм — это высокоуровневая логика |
-| Где GetRevitServerDate? | В RevitServerService, не в FileService — каждый сервис обрабатывает свой тип пути |
-
----
 
 ## Полезные ссылки
 

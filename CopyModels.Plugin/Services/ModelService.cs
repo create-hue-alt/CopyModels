@@ -8,5 +8,6 @@ namespace CopyModels.Plugin.Services
 {
     internal class ModelService
     {
+
     }
 }
