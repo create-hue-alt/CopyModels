@@ -1,7 +1,9 @@
 ﻿using Autodesk.Revit.ApplicationServices;
 using Autodesk.Revit.DB;
+using Autodesk.Revit.DB.IFC;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -37,13 +39,62 @@ namespace CopyModels.Plugin.Services
         /// <summary>Открывает модель с DetachAndPreserveWorksets</summary>
         public Document OpenWithDetach(string patth, IList<string> closeWorksetMask = null)
         {
-            throw new NotImplementedException();
+            _logInfo($"Opening (detach): {patth}");
+            try
+            {
+                var modelPath = ModelPathUtils.ConvertUserVisiblePathToModelPath(patth);
+                var options = new OpenOptions
+                {
+                    DetachFromCentralOption = DetachFromCentralOption.DetachAndPreserveWorksets,
+                    Audit = true
+                };
+
+                ApplyWorksetConfiguration(options, modelPath, patth, closeWorksetMask);
+
+                var doc = _app.OpenDocumentFile(modelPath, options);
+                _logInfo($"Opened: {patth}");
+                return doc;
+            }
+            catch (Exception ex)
+            {
+                _logError($"OpneWithDetach filed: {ex.Message}\n{patth}");
+                return null;
+            }
         }
 
         /// <summary>Открывает IFC-файлы</summary>
-        public Document OpneIfc(string path)
+        public Document OpenIfc(string path)
         {
-            throw new NotImplementedException();
+            _logInfo($"Opening IFC: {path}");
+            if (!OptionalFunctionalityUtils.IsIFCAvailable())
+            {
+                _logError("IFC module is not avaliable.");
+                return null;
+            }
+            if (!File.Exists(path))
+            {
+                _logError($"IFC file not found: {path}");
+                return null;
+            }
+
+            var opts = new IFCImportOptions
+            {
+                Action = IFCImportAction.Open,
+                AutocorrectOffAxisLines = false,
+                AutoJoin = false,
+                Intent = IFCImportIntent.Reference
+            };
+
+            try
+            {
+                return _app.OpenIFCDocument(path, opts);
+            }
+            catch
+            {
+                opts.Intent = IFCImportIntent.Reference;
+                opts.AutoJoin = true;
+                return _app.OpenIFCDocument(path, opts);
+            }
         }
 
         // 
@@ -65,7 +116,7 @@ namespace CopyModels.Plugin.Services
         // 
 
         /// <summary>Сохраняет модель в указанный путь как Central.</summary>
-        public bool SaveAsRvt (Document doc, string targetPath, string archiveFolder = null)
+        public bool SaveAsRvt(Document doc, string targetPath, string archiveFolder = null)
         {
             throw new NotImplementedException();
         }
@@ -78,7 +129,7 @@ namespace CopyModels.Plugin.Services
         /// Экспортирует модель в NWC или IFC.
         /// Сначала экспортирует во времменный файл, затем превращает в целевой.
         /// </summary>
-        public bool ExportModel (
+        public bool ExportModel(
             Document doc,
             string targetPath,
             string archiveFolder = null,
