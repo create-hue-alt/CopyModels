@@ -103,12 +103,28 @@ namespace CopyModels.Plugin.Services
 
         public void RelinquishAndClose(Document doc)
         {
-            throw new NotImplementedException();
+            if (doc == null) return;
+            RelinquishOwnership(doc);
+            doc.Close();
+            doc.Dispose();
+            _logInfo("Document closed");
         }
 
         private void RelinquishOwnership(Document doc)
         {
-            throw new NotImplementedException();
+            if (!doc.IsWorkshared || string.IsNullOrEmpty(doc.PathName)) return;
+            try
+            {
+                WorksharingUtils.RelinquishOwnership(
+                    doc,
+                    new RelinquishOptions(true),
+                    new TransactWithCentralOptions());
+                _logInfo("Relinquish done.");
+            }
+            catch (Exception ex)
+            {
+                _logWarning($"Relinquish error: {ex.Message}");
+            }
         }
 
         // 
@@ -118,7 +134,36 @@ namespace CopyModels.Plugin.Services
         /// <summary>Сохраняет модель в указанный путь как Central.</summary>
         public bool SaveAsRvt(Document doc, string targetPath, string archiveFolder = null)
         {
-            throw new NotImplementedException();
+            try
+            {
+                if (archiveFolder != null)
+                    _fileService.ArchiveModel(targetPath, archiveFolder);
+                if (File.Exists(targetPath))
+                    _fileService.MarkReadWrite(targetPath);
+
+                var modelPath = ModelPathUtils.ConvertUserVisiblePathToModelPath(targetPath);
+                var saveOpts = new SaveAsOptions
+                {
+                    OverwriteExistingFile = true,
+                    Compact = true,
+                    MaximumBackups = 1,
+                };
+
+                if (doc.IsWorkshared)
+                {
+                    var wsOpts = new WorksharingSaveAsOptions { SaveAsCentral = true };
+                    saveOpts.SetWorksharingOptions(wsOpts);
+                }
+
+                doc.SaveAs(modelPath, saveOpts);
+                _logInfo($"Saved: {targetPath}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logError($"SaveAsRvt error: {ex.Message}\n{targetPath}");
+                return false;
+            }
         }
 
         // 
