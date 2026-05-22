@@ -184,7 +184,121 @@ namespace CopyModels.Plugin.Services
             bool nwcDivideIntoLevels = true,
             Dictionary<string, object> ifcSettings = null)
         {
-            throw new NotImplementedException();
+            var ext = Path.GetExtension(targetPath).ToUpper();
+            var tmpDir = Path.GetTempPath();
+            var tmpName = Path.GetFileNameWithoutExtension(targetPath)
+                        + "_" + DateTime.Now.ToString("yyyyMMdd_HHmmss")
+                        + Path.GetExtension(targetPath);
+            var tmpPath = Path.Combine(tmpDir, tmpName);
+
+            _logInfo($"Exporting to: {targetPath}");
+
+            // Найти вид
+            var view = GetViewByName(doc, viewName);
+            if (view == null && viewName.Equals("navisworks", StringComparison.OrdinalIgnoreCase))
+            {
+                _logWarning($"No NavisWorks view found in {doc.Title}, creating new.");
+                view = Create3DView(doc, "NavisWorks");
+            }
+            if (view == null)
+            {
+                _logError($"View '{viewName}' not found in {doc.Title}. Export aborted.");
+                return false;
+            }
+
+            CheckAndFixView(view);
+
+            // Архивировать старый файл перед жкспортом
+            try
+            {
+                if (File.Exists(tmpPath))
+                {
+                    _logInfo($"Archiving existing file: {targetPath}");
+                    if (archiveFolder != null)
+                    {
+                        // ArchiveModel перемещает файл в архив папку
+                        _fileService.ArchiveModel(targetPath, archiveFolder);
+                    }
+                    else
+                    {
+                        // Если архива нет - просто удаляем
+                        _fileService.MarkReadWrite(targetPath);
+                        File.Delete(targetPath);
+                        _logInfo($"Deleted old file: {targetPath}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logError($"Archive error: {ex.Message}");
+                return false;
+            }
+
+            // Подготовить опции экспорта
+            bool exported = false;
+            Transaction t = null;
+
+            try
+            {
+                switch (ext)
+                {
+                    case ".NWC":
+                        var nwcOpts = BuildNwcOptions(view,
+                                                    nwcAllProprties,
+                                                    nwcRoom,
+                                                    nwcDivideIntoLevels);
+                        if (nwcOpts == null) return false;
+
+                        _fileService.EnsureDirectory(tmpPath);
+                        exported = doc.Export(Path.GetDirectoryName(tmpPath),
+                                                Path.GetFileName(tmpPath),
+                                                nwcOpts);
+                        break;
+
+                    case ".IFC":
+                        var ifcopts = BuildIfcOptions(view,
+                                                    ifcSettings
+                                                    ?? new Dictionary<string, object>());
+                        if (ifcopts == null) return false;
+
+                        // IFC требует транзакции
+                        t = new Transaction(doc, "Export IFC");
+                        t.Start();
+
+                        _fileService.EnsureDirectory(tmpPath);
+                        exported = doc.Export(Path.GetDirectoryName(tmpPath), 
+                                                    Path.GetFileName(tmpPath), 
+                                                    ifcopts);
+
+                        t.Commit();
+                        break;
+
+                    default:
+                        _logError($"Export to {ext} not implemented");
+                        return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logError($"Export error: {ex.Message}");
+                t?.RollBack();
+                return false;
+            }
+
+            // Переместить в цель.
+            try
+            {
+                _fileService.EnsureDirectory(targetPath);
+                File.Copy(tmpPath, tmpPath, overwrite: true);
+                File.Delete(tmpPath);
+                _logInfo($"Export saved: {targetPath}");
+                return true;
+            }
+            catch ( Exception ex ) 
+            {
+                _logError($"Move export error: {ex.Message}\nTemp: {tmpPath}");
+                return false ;
+            }
         }
 
         // 
