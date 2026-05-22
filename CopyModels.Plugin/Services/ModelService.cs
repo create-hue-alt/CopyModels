@@ -357,7 +357,49 @@ namespace CopyModels.Plugin.Services
                             bool transmit = true,
                             bool relativeLinks = false)
         {
-            throw new NotImplementedException();
+            if (FileService.IsRevitServer(path))
+            {
+                _logInfo("Transmit not required for Revit Server");
+                return true;
+            }
+
+            try
+            {
+                var modelPath = new FilePath(path);
+                var tmd = TransmissionData.ReadTransmissionData(modelPath);
+                tmd.IsTransmitted = transmit;
+
+                foreach (var linkId in tmd.GetAllExternalFileReferenceIds())
+                {
+                    var refData = tmd.GetLastSavedReferenceData(linkId);
+
+                    if (relativeLinks && 
+                        refData.ExternalFileReferenceType == ExternalFileReferenceType.RevitLink)
+                    {
+                        var linkPath = refData.GetAbsolutePath();
+                        var userPath = ModelPathUtils.ConvertModelPathToUserVisiblePath(linkPath);
+                        var modelName = Path.GetFileName(userPath);
+                        tmd.SetDesiredReferenceData(linkId,
+                                                    new FilePath(modelName),
+                                                    PathType.Relative,
+                                                    true);
+                    }
+                    else
+                    {
+                        tmd.SetDesiredReferenceData(linkId,
+                                                    refData.GetPath(),
+                                                    refData.PathType,
+                                                    true);
+                    }
+                }
+                TransmissionData.WriteTransmissionData(modelPath, tmd);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logError($"TransmitModel error: {ex.Message}");
+                return false;
+            }
         }
 
         //
