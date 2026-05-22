@@ -250,9 +250,9 @@ namespace CopyModels.Plugin.Services
                         if (nwcOpts == null) return false;
 
                         _fileService.EnsureDirectory(tmpPath);
-                        exported = doc.Export(Path.GetDirectoryName(tmpPath),
-                                                Path.GetFileName(tmpPath),
-                                                nwcOpts);
+                        doc.Export(Path.GetDirectoryName(tmpPath),
+                                   Path.GetFileName(tmpPath),
+                                   nwcOpts);
                         break;
 
                     case ".IFC":
@@ -266,8 +266,8 @@ namespace CopyModels.Plugin.Services
                         t.Start();
 
                         _fileService.EnsureDirectory(tmpPath);
-                        exported = doc.Export(Path.GetDirectoryName(tmpPath), 
-                                                    Path.GetFileName(tmpPath), 
+                        exported = doc.Export(Path.GetDirectoryName(tmpPath),
+                                                    Path.GetFileName(tmpPath),
                                                     ifcopts);
 
                         t.Commit();
@@ -285,6 +285,13 @@ namespace CopyModels.Plugin.Services
                 return false;
             }
 
+            // Проверяем создался ли файл
+            if (!File.Exists(tmpPath))
+            {
+                _logError($"Export failed: file not crreated at {tmpPath}");
+                return false;
+            }
+
             // Переместить в цель.
             try
             {
@@ -294,10 +301,10 @@ namespace CopyModels.Plugin.Services
                 _logInfo($"Export saved: {targetPath}");
                 return true;
             }
-            catch ( Exception ex ) 
+            catch (Exception ex)
             {
                 _logError($"Move export error: {ex.Message}\nTemp: {tmpPath}");
-                return false ;
+                return false;
             }
         }
 
@@ -308,7 +315,38 @@ namespace CopyModels.Plugin.Services
         /// <summary>Выполняет purge модели через PerformanceAdvisir</summary>
         public int PurgeDocument(Document doc)
         {
-            throw new NotImplementedException();
+            var purgeGuid = new Guid("e8c63650-70b7-435a-9010-ec97660c1bda");
+            PerformanceAdviserRuleId ruleId = null;
+
+            var adviser = PerformanceAdviser.GetPerformanceAdviser();
+            foreach (var rule in adviser.GetAllRuleIds())
+                if (rule.Guid.Equals(purgeGuid)) { ruleId = rule; break; }
+
+            if (ruleId == null) return 0;
+
+            var messages = adviser.ExecuteRules(doc,
+                                    new List<PerformanceAdviserRuleId>() { ruleId });
+            if (messages.Count == 0) return 0;
+
+            using (var t = new Transaction(doc, "Purge unused"))
+            {
+                try
+                {
+                    t.Start();
+                    var ids = messages[0].GetFailingElements();
+                    var deleted = doc.Delete(ids).Count;
+                    doc.Regenerate();
+                    t.Commit();
+                    _logInfo($"Purge {deleted} elemrnts.");
+                    return deleted;
+                }
+                catch (Exception ex)
+                {
+                    _logError($"Purge error: {ex.Message}");
+                    t.RollBack();
+                    return 0;
+                }
+            }
         }
 
         // 
