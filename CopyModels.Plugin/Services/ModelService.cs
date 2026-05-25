@@ -35,27 +35,27 @@ namespace CopyModels.Plugin.Services
         // 
 
         /// <summary>Открывает модель с DetachAndPreserveWorksets</summary>
-        public Document OpenWithDetach(string patth, IList<string> closeWorksetMask = null)
+        public Document OpenWithDetach(string path, IList<string> closeWorksetMask = null)
         {
-            _logInfo($"Opening (detach): {patth}");
+            _logInfo($"Opening (detach): {path}");
             try
             {
-                var modelPath = ModelPathUtils.ConvertUserVisiblePathToModelPath(patth);
+                var modelPath = ModelPathUtils.ConvertUserVisiblePathToModelPath(path);
                 var options = new OpenOptions
                 {
                     DetachFromCentralOption = DetachFromCentralOption.DetachAndPreserveWorksets,
                     Audit = true
                 };
 
-                ApplyWorksetConfiguration(options, modelPath, patth, closeWorksetMask);
+                ApplyWorksetConfiguration(options, modelPath, path, closeWorksetMask);
 
                 var doc = _app.OpenDocumentFile(modelPath, options);
-                _logInfo($"Opened: {patth}");
+                _logInfo($"Opened: {path}");
                 return doc;
             }
             catch (Exception ex)
             {
-                _logError($"OpneWithDetach filed: {ex.Message}\n{patth}");
+                _logError($"OpenWithDetach filed: {ex.Message}\n{path}");
                 return null;
             }
         }
@@ -102,10 +102,17 @@ namespace CopyModels.Plugin.Services
         public void RelinquishAndClose(Document doc)
         {
             if (doc == null) return;
-            RelinquishOwnership(doc);
-            doc.Close();
-            doc.Dispose();
-            _logInfo("Document closed");
+            try
+            {
+                RelinquishOwnership(doc);
+                doc.Close();
+                _logInfo("Document closed");
+
+            }
+            catch (Exception ex)
+            {
+                _logError($"Close error: {ex.Message}");
+            }
         }
 
         private void RelinquishOwnership(Document doc)
@@ -177,7 +184,7 @@ namespace CopyModels.Plugin.Services
             string targetPath,
             string archiveFolder = null,
             string viewName = "navisworks",
-            bool nwcAllProprties = true,
+            bool nwcAllProperties = true,
             bool nwcRoom = false,
             bool nwcDivideIntoLevels = true,
             Dictionary<string, object> ifcSettings = null)
@@ -206,10 +213,10 @@ namespace CopyModels.Plugin.Services
 
             CheckAndFixView(view);
 
-            // Архивировать старый файл перед жкспортом
+            // Архивировать старый файл перед экспортом
             try
             {
-                if (File.Exists(tmpPath))
+                if (File.Exists(targetPath))
                 {
                     _logInfo($"Archiving existing file: {targetPath}");
                     if (archiveFolder != null)
@@ -242,7 +249,7 @@ namespace CopyModels.Plugin.Services
                 {
                     case ".NWC":
                         var nwcOpts = BuildNwcOptions(view,
-                                                    nwcAllProprties,
+                                                    nwcAllProperties,
                                                     nwcRoom,
                                                     nwcDivideIntoLevels);
                         if (nwcOpts == null) return false;
@@ -269,6 +276,12 @@ namespace CopyModels.Plugin.Services
                                                     ifcopts);
 
                         t.Commit();
+
+                        if (!exported)
+                        {
+                            _logError($"IFC export failed!");
+                            return false;
+                        }
                         break;
 
                     default:
@@ -286,7 +299,7 @@ namespace CopyModels.Plugin.Services
             // Проверяем создался ли файл
             if (!File.Exists(tmpPath))
             {
-                _logError($"Export failed: file not crreated at {tmpPath}");
+                _logError($"Export failed: file not created at {tmpPath}");
                 return false;
             }
 
@@ -294,7 +307,7 @@ namespace CopyModels.Plugin.Services
             try
             {
                 _fileService.EnsureDirectory(targetPath);
-                File.Copy(tmpPath, tmpPath, overwrite: true);
+                File.Copy(tmpPath, targetPath, overwrite: true);
                 File.Delete(tmpPath);
                 _logInfo($"Export saved: {targetPath}");
                 return true;
@@ -335,7 +348,7 @@ namespace CopyModels.Plugin.Services
                     var deleted = doc.Delete(ids).Count;
                     doc.Regenerate();
                     t.Commit();
-                    _logInfo($"Purge {deleted} elemrnts.");
+                    _logInfo($"Purge {deleted} elements.");
                     return deleted;
                 }
                 catch (Exception ex)
@@ -470,7 +483,7 @@ namespace CopyModels.Plugin.Services
         {
             if (!OptionalFunctionalityUtils.IsNavisworksExporterAvailable())
             {
-                _logError("Navisworks expoter not avaliable.");
+                _logError("Navisworks exporter not available.");
                 return null;
             }
 
@@ -498,9 +511,9 @@ namespace CopyModels.Plugin.Services
                                         View view,
                                         Dictionary<string, object> settings)
         {
-            if (OptionalFunctionalityUtils.IsIFCAvailable())
+            if (!OptionalFunctionalityUtils.IsIFCAvailable())
             {
-                _logError("IFC exporter not avaliable");
+                _logError("IFC exporter not available");
                 return null;
             }
 
