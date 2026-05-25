@@ -5,8 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CopyModels.Plugin.Services
 {
@@ -373,7 +371,7 @@ namespace CopyModels.Plugin.Services
                 {
                     var refData = tmd.GetLastSavedReferenceData(linkId);
 
-                    if (relativeLinks && 
+                    if (relativeLinks &&
                         refData.ExternalFileReferenceType == ExternalFileReferenceType.RevitLink)
                     {
                         var linkPath = refData.GetAbsolutePath();
@@ -408,17 +406,55 @@ namespace CopyModels.Plugin.Services
 
         public View GetViewByName(Document doc, string name)
         {
-            throw new NotImplementedException();
+            var views = new FilteredElementCollector(doc)
+                .OfClass(typeof(View))
+                .WhereElementIsNotElementType()
+                .Cast<View>();
+
+            return views.FirstOrDefault(v =>
+                !v.IsTemplate &&
+                v.Name.IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0);
         }
 
         public View3D Create3DView(Document doc, string name = null)
         {
-            throw new NotImplementedException();
+            var viewType = new FilteredElementCollector(doc)
+                .OfClass(typeof(ViewFamilyType))
+                .Cast<ViewFamilyType>()
+                .FirstOrDefault(vt => vt.ViewFamily == ViewFamily.ThreeDimensional);
+
+            if (viewType == null) return null;
+
+            using (var t = new Transaction(doc, "Create 3D View"))
+            {
+                t.Start();
+
+                var view = View3D.CreateIsometric(doc, viewType.Id);
+                if (name != null) view.Name = name;
+
+                t.Commit();
+
+                return view;
+            }
         }
 
         private void CheckAndFixView(View view)
         {
-            throw new NotImplementedException();
+            var doc = view.Document;
+            using (var t = new Transaction(doc, "Fix view for export"))
+            {
+                t.Start();
+                try
+                {
+                    if (view.get_Parameter(BuiltInParameter.VIEW_DETAIL_LEVEL)?.AsInteger() < 3)
+                        view.DetailLevel = ViewDetailLevel.Fine;
+                    if (view.CropBoxActive)
+                        view.CropBoxActive = false;
+                    if (view is View3D v3d && v3d.IsSectionBoxActive)
+                        v3d.IsSectionBoxActive = false;
+                }
+                finally { doc.Regenerate(); t.Commit(); }
+            }
         }
 
         // 
