@@ -462,15 +462,107 @@ namespace CopyModels.Plugin.Services
         // 
 
         private NavisworksExportOptions BuildNwcOptions(
-            View view, bool allProps, bool room, bool divideIntoLevels)
+                                        View view,
+                                        bool allProps,
+                                        bool room,
+                                        bool divideIntoLevels,
+                                        bool links = false)
         {
-            throw new NotImplementedException();
+            if (!OptionalFunctionalityUtils.IsNavisworksExporterAvailable())
+            {
+                _logError("Navisworks expoter not avaliable.");
+                return null;
+            }
+
+            var opts = new NavisworksExportOptions
+            {
+                ConvertElementProperties = allProps,
+                Coordinates = NavisworksCoordinates.Shared,
+                DivideFileIntoLevels = divideIntoLevels,
+                ExportElementIds = true,
+                ExportLinks = links,
+                ExportParts = true,
+                ExportRoomAsAttribute = false,
+                ExportRoomGeometry = room,
+                ExportScope = NavisworksExportScope.View,
+                ExportUrls = true,
+                FindMissingMaterials = false,
+                Parameters = NavisworksParameters.All,
+                ViewId = view.Id
+            };
+
+            return opts;
         }
 
         private IFCExportOptions BuildIfcOptions(
-            View view, Dictionary<string, object> settings)
+                                        View view,
+                                        Dictionary<string, object> settings)
         {
-            throw new NotImplementedException();
+            if (OptionalFunctionalityUtils.IsIFCAvailable())
+            {
+                _logError("IFC exporter not avaliable");
+                return null;
+            }
+
+            string Get(string key, string def) =>
+                settings.TryGetValue(key, out var v) ? v?.ToString() ?? def : def;
+            bool GetBool(string key, bool def) =>
+                settings.TryGetValue(key, out var v) &&
+                bool.TryParse(v?.ToString(), out var b) ? b : def;
+
+            var opts = new IFCExportOptions
+            {
+                WallAndColumnSplitting = GetBool("WallAndColumnSplitting", true),
+                ExportBaseQuantities = GetBool("ExportBaseQuantities", true),
+                FilterViewId = view.Id,
+                SpaceBoundaryLevel = settings.
+                        TryGetValue("SpaceBoundaryLevel", out var sbl)
+                        ? Convert.ToInt32(sbl) : 0
+            };
+
+            // FileVersion
+            if (settings.TryGetValue("FileVersion", out var fv))
+            {
+                if (Enum.TryParse<IFCVersion>(fv?.ToString(), false, out var parsed))
+                    opts.FileVersion = parsed;
+            }
+            else
+            {
+                opts.FileVersion = IFCVersion.IFC2x3CV2;
+            }
+
+            opts.AddOption("ActiveViewId", view.Id.IntegerValue.ToString());
+            opts.AddOption("ExportInternalRevitPropertySets", Get("ExportInternalRevitPropertySets", "true"));
+            opts.AddOption("ExportIfcCommonPropertySets", Get("ExportIfcCommonPropertySets", "true"));
+            opts.AddOption("ExportAnnotations", Get("ExportAnnotations", "false"));
+            opts.AddOption("ExportLinkedFiles", Get("ExportLinkedFiles", "true"));
+            opts.AddOption("ExportVisibleElementsInView", Get("ExportVisibleElementsInView", "true"));
+            opts.AddOption("ExportPartsAsBuildingElements", Get("ExportPartsAsBuildingElements", "true"));
+            opts.AddOption("UseActiveViewGeometry", Get("UseActiveViewGeometry", "true"));
+            opts.AddOption("ExportSolidModelRep", Get("ExportSolidModelRep", "true"));
+            opts.AddOption("Use2DRoomBoundaryForVolume", Get("Use2DRoomBoundaryForVolume", "false"));
+            opts.AddOption("UseFamilyAndTypeNameForReference", Get("UseFamilyAndTypeNameForReference", "false"));
+            opts.AddOption("ExportSpecificSchedules", Get("ExportSpecificSchedules", "false"));
+            opts.AddOption("ExportBoundingBox", Get("ExportBoundingBox", "false"));
+            opts.AddOption("ExportSchedulesAsPsets", Get("ExportSchedulesAsPsets", "false"));
+            opts.AddOption("ExportUserDefinedPsets", Get("ExportUserDefinedPsets", "false"));
+            opts.AddOption("ExportUserDefinedPsetsFileName", Get("ExportUserDefinedPsetsFileName", ""));
+            opts.AddOption("ExportUserDefinedParameterMapping", Get("ExportUserDefinedParameterMapping", "false"));
+            opts.AddOption("ExportUserDefinedParameterMappingFileName", Get("ExportUserDefinedParameterMappingFileName", ""));
+            opts.AddOption("SitePlacement", Get("SitePlacement", "0"));
+            opts.AddOption("TessellationLevelOfDetail", Get("TessellationLevelOfDetail", "0"));
+            opts.AddOption("UseOnlyTriangulation", Get("UseOnlyTriangulation", "false"));
+            opts.AddOption("StoreIFCGUID", Get("StoreIFCGUID", "false"));
+            opts.AddOption("FileType", Get("FileType", "Ifc"));
+            opts.AddOption("ExportRoomsInView", Get("ExportRoomsInView", "false"));
+            opts.AddOption("ExcludeFilter", Get("ExcludeFilter", ""));
+            opts.AddOption("IncludeSteelElements", Get("IncludeSteelElements", "true"));
+            opts.AddOption("COBieCompanyInfo", Get("COBieCompanyInfo", ""));
+            opts.AddOption("COBieProjectInfo", Get("COBieProjectInfo", ""));
+            opts.AddOption("UseTypeNameOnlyForIfcType", Get("UseTypeNameOnlyForIfcType", "false"));
+            opts.AddOption("UseVisibleRevitNameAsEntityName", Get("UseVisibleRevitNameAsEntityName", "false"));
+
+            return opts;
         }
 
         // 
