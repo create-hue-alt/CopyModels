@@ -570,12 +570,44 @@ namespace CopyModels.Plugin.Services
         // 
 
         private void ApplyWorksetConfiguration(
-            OpenOptions options,
-            ModelPath modelPath,
-            string pathString,
-            IList<string> closeWorksetMark)
+                                    OpenOptions options,
+                                    ModelPath modelPath,
+                                    string pathString,
+                                    IList<string> closeWorksetMark)
         {
-            throw new NotImplementedException();
+            if (closeWorksetMark == null || closeWorksetMark.Count == 0) return;
+
+            try
+            {
+                var info = BasicFileInfo.Extract(pathString);
+                if (!info.IsWorkshared || !info.IsCentral) return;
+
+                var worsets = WorksharingUtils.GetUserWorksetInfo(modelPath);
+                var config = new WorksetConfiguration(WorksetConfigurationOption.CloseAllWorksets);
+                var toOpen = new List<WorksetId>();
+
+                foreach ( var ws in worsets )
+                {
+                    var shouldClose = closeWorksetMark
+                        .Any(m => ws.Name.IndexOf(m, StringComparison.OrdinalIgnoreCase) >= 0);
+
+                    if (!shouldClose)
+                        toOpen.Add(ws.Id);
+
+                    _logInfo($"Workset '{ws.Name}' : {(shouldClose ? "Close" : "Open")}");
+                }
+
+                if (toOpen.Count > 0) 
+                    config.Open(toOpen);
+
+                options.SetOpenWorksetsConfiguration(config);
+            }
+            catch (Exception ex)
+            {
+                _logWarning($"Workset config error, opening all: {ex.Message}");
+                options.SetOpenWorksetsConfiguration(
+                    new WorksetConfiguration(WorksetConfigurationOption.OpenAllWorksets));
+            }
         }
     }
 }
