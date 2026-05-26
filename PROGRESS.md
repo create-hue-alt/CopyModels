@@ -80,7 +80,7 @@ CopyModels.sln
   - [x] GetModelDate() — парсинг `/Date(...)` формата
   - [x] CopyOnRevitServer() — копирование на RSN
   - [x] Полная обработка ошибок и логирование
-- [ ] `ModelService.cs` — открытие / экспорт / сохранение моделей
+- [x] `ModelService.cs` — открытие / экспорт / сохранение моделей
 - [ ] `EventService.cs` — подавление диалогов Revit
 
 ### Plugin ⏳
@@ -156,12 +156,6 @@ CopyModels.sln
 - Конструктор: `Discipline`, `Project`, `SourcePath` (с ReplacePlaceholders), `TargetPath` (JArray), `BackupFolder`, `Purge`, `KeepStructure`, `DeleteMissed`, `Transmit`
 - Методы: `ReplacePlaceholders()`, `ParseStringList()`
 
-**Найденные и исправленные ошибки:**
-- `"Target Paths"` → `"Target Path"` (опечатка в ключе JSON — компилятор не поймет)
-- `{DATA}` → `{DATE}` (опечатка в плейсхолдере)
-- `Transmit = ... ?? false` → убрали `?? false`, нужен чистый `bool?`
-- `NwcLinkedFiles` — добавлено осознанно для управления экспортом связанных файлов
-
 ---
 
 ### Сессия 3 — ModelSetting.cs
@@ -211,14 +205,6 @@ CopyModels.sln
 - `foreach (var projectProp in root.Properties())` — итерация по объектам JSON
 - `IReadOnlyList<T>` — возвращаемый тип (только для чтения)
 
-**Найденные и исправленные ошибки:**
-- Убрали второй параметр `disciplines` из `ReadFiles()` — дисциплина теперь берётся из имени файла
-- Упростили `ReadAll()` — теперь просто `Directory.GetFiles()` и в `ReadFiles()`
-
-**Следующий шаг:**
-- Протестировать на реальных конфигах (3 проекта, 30+ заданий)
-- Переходить к `FileService.cs` — копирование файлов
-
 ---
 
 ### Сессия 5 — FileService.cs ✅
@@ -250,17 +236,6 @@ CopyModels.sln
 - `RevitServerService` — ТОЛЬКО операции с Revit Server
 - `ModelService` — выбирает нужный сервис по типу пути
 
-**Исправленные ошибки:**
-- ✅ `logWarninf` → `logWarning`
-- ✅ `CopyFail` → `CopyFile`
-- ✅ `sourcePaht` → `sourcePath` (везде)
-- ✅ Логика откатывания архива в `CopyFile`
-- ✅ `:Nothing to archive:` → `Nothing to archive:`
-- ✅ `archiveFolder` → `archiveTemplate`
-- ✅ `discounnResult` → `disconnectResult`
-- ✅ `LastWriteTime` → `LastWriteTimeUtc`
-- ✅ Полная структура `NETRESOURCE` с dwScope, dwDisplayType, dwUsage
-- ✅ Нормализация `driveLetter` в `MapDrive()`
 
 **Добавлено в код:**
 - XML-документация `/// <summary>` для всех public методов
@@ -346,6 +321,29 @@ CopyModels.sln
 FilePath: P:\Projects\Model.rvt        → FileService
 RSN Path: RSN://server/folder/Model.rvt → RevitServerService
 ```
+
+## Сессия 8: ModelService.cs ✅
+
+### ✅ Реализовано (620 строк кода)
+
+- OpenWithDetach() — RVT с детачем + worksets
+- OpenIfc() — открытие IFC файлов
+- SaveAsRvt() — сохранение как Central с архивом
+- ExportModel() — NWC/IFC (обработка void vs bool)
+- PurgeDocument() — очистка через PerformanceAdviser
+- TransmitModel() — transmit + relative links
+- Виды: GetViewByName(), Create3DView(), CheckAndFixView()
+- Опции: BuildNwcOptions(12) + BuildIfcOptions(30+)
+- ApplyWorksetConfiguration() — открытие/закрытие worksets
+
+### 🔑 Ключевые решения
+
+1. **Архивирование ДО экспорта** — старый файл в архиве при падении
+2. **Проверка файла для обоих форматов** — NWC(void) + IFC(bool)
+3. **Избегаем вложенных транзакций** — CheckAndFixView() перед экспортом
+4. **Разные подходы опций** — NWC(properties) vs IFC(AddOption)
+
+---
 
 ## Полезные ссылки
 
