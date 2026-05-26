@@ -57,5 +57,11 @@
     <Compile Include="Services\ModelService.cs" />
     <Compile Include="Services\RevitServerService.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\CopyModels.Core\CopyModels.Core.csproj">
+      <Project>{ADE89861-5EB7-4E43-A4B5-5B15D1787BF7}</Project>
+      <Name>CopyModels.Core</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
