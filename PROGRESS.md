@@ -81,7 +81,7 @@ CopyModels.sln
   - [x] CopyOnRevitServer() — копирование на RSN
   - [x] Полная обработка ошибок и логирование
 - [x] `ModelService.cs` — открытие / экспорт / сохранение моделей
-- [ ] `EventService.cs` — подавление диалогов Revit
+- [x] `EventService.cs` — подавление диалогов Revit
 
 ### Plugin ⏳
 - [ ] `CopyModelsCommand.cs`
@@ -116,10 +116,6 @@ CopyModels.sln
 - Архитектура: 3 проекта в Solution (Core, Plugin, UI)
 - Планировщик через Windows Task Scheduler
 - UI на WPF по паттерну MVVM
-
-**Следующий шаг:**
-- Создать Solution в Visual Studio
-- Начать с `ProjectSettings.cs`
 
 ---
 
@@ -243,9 +239,6 @@ CopyModels.sln
 - Логирование с полной информацией об ошибках
 - Try-catch блоки в критических методах
 
-**Следующий шаг:**
-- Написать `RevitServerService.cs` — HTTP запросы к Revit Server
-
 ---
 
 ### Сессия 6 — HTTP запросы и RevitServerService.cs ✅
@@ -258,9 +251,6 @@ CopyModels.sln
 - Выяснили как работает progress bar с синхронным кодом
 - Переделали RevitServerService с WebRequest на HttpClient
 - Исправили все ошибки в коде
-
-**Следующий шаг:**
-- Написать `ModelService.cs` — высокоуровневая логика
 
 ---
 
@@ -289,10 +279,6 @@ CopyModels.sln
 - Callback-функции для логирования работают
 - HTTP запросы к реальному Revit Server успешны
 - Парсинг дат в формате Revit Server (`/Date(...)`) работает
-
-**Следующий шаг:**
-- Написать `ModelService.cs` — координатор между FileService и RevitServerService
-- Или сразу начать EventService для подавления диалогов Revit
 
 ## Разделение ответственности между сервисами
 
@@ -342,6 +328,40 @@ RSN Path: RSN://server/folder/Model.rvt → RevitServerService
 2. **Проверка файла для обоих форматов** — NWC(void) + IFC(bool)
 3. **Избегаем вложенных транзакций** — CheckAndFixView() перед экспортом
 4. **Разные подходы опций** — NWC(properties) vs IFC(AddOption)
+
+---
+
+## Сессия 9: EventService.cs
+
+**Что сделали**
+- EventService.cs — полная реализация
+- OnFailureProcessing() — обработка ошибок
+- OnDialogBoxShowing() — подавление диалогов
+
+**Ключевое решение**
+1. Два типа Application в EventService:
+    - FailuresProcessing → Application._app
+    - DialogBoxShowing → UIApplication._uiApp
+2. Guard проверка при Subscribe:
+    - if (_subscribed) return;  // Избегаем двойной подписки
+3. IDisposable паттерн:
+    - Позволяет использовать using() блок
+    - Автоматическая отписка от событий
+4. Логирование через callbacks:
+    - Не привязано к конкретной системе логирования
+    - Гибко подстраивается под разные логгеры
+
+## Следующие шаги:
+
+CopyModelsCommand.cs — IExternalCommand точка входа:
+
+    - Инициализация всех сервисов
+    - Чтение конфигов JSON
+    - Выбор заданий через TaskDialog
+    - Выбор форматов (NWC/IFC/RVT)
+    - Запуск копирования/экспорта
+    - EventService регистрация для автоматической обработки
+    - Логирование результатов
 
 ---
 
