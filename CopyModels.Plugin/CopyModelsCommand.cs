@@ -3,6 +3,7 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using CopyModels.Core.Models;
 using CopyModels.Plugin.Services;
+using CopyModels.Settings;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -33,7 +34,97 @@ namespace CopyModels.Plugin
             ref string message,
             ElementSet elementSet)
         {
-            throw new NotImplementedException();
+            _uiApp = commandData.Application;
+            var app = _uiApp.Application;
+            var revitVersion = app.VersionNumber;
+
+            // Логирование
+            var logPath = Path.Combine(@"C:\Log",
+                $"CopyModels_{DateTime.Now:yyyyMMdd_HHmmss}.log");
+            Directory.CreateDirectory(Path.GetDirectoryName(logPath));
+            var logWriter = new StreamWriter(logPath, append: false, System.Text.Encoding.UTF8);
+
+            Action<string> logInfo = m => WriteLog(logWriter, "INFO", m);
+            Action<string> logWarning = m => WriteLog(logWriter, "WARNING", m);
+            Action<string> logError = m => WriteLog(logWriter, "ERROR", m);
+
+            logInfo($"Windows User  : {Environment.UserName}");
+            logInfo($"PC            : {Environment.MachineName}");
+            logInfo($"Revit Version : {revitVersion}");
+            logInfo($"Revit User    : {app.Username}");
+
+            // Проверка: нет открытых документов
+            if(!app.Documents.IsEmpty)
+            {
+                logError("Please run in a clear Revit session (no open models required).");
+                TaskDialog.Show("CopeModels", "Please close all Revit models before running.");
+                logWriter.Dispose();
+                return Result.Cancelled;
+            }
+
+            // Сервисы
+            _fileService = new FileService(logInfo, logWarning, logError);
+            _rsnService = new RevitServerService(revitVersion, logInfo, logWarning, logError);
+            _modelService = new ModelService(app, _fileService, logInfo, logWarning, logError);
+            _eventService = new EventService(app, _uiApp, logInfo, logWarning);
+            _resultTable = new Dictionary<string, List<string[]>>();
+
+            // Путь к JSON конфигам
+            var scriptPath = Path.GetDirectoryName(
+                typeof(CopyModelsCommand).Assembly.Location );
+            var settingsPath = Path.Combine(scriptPath, revitVersion);
+            var settingsReader = new SettingsReader(settingsPath);
+
+            // Выбор дисциплины
+            var disciplines = settingsReader.GetDisciplineNames().ToList();
+            disciplines.Add("!BIM!");
+
+            var selectedDiscipline = ShowSelectionDialog(
+                disciplines,
+                "Select Discipline",
+                multiselect: false)
+                ?.FirstOrDefault();
+            if (selectedDiscipline == null) { logWriter.Dispose(); return Result.Cancelled; }
+
+            logInfo($"Discipline: {selectedDiscipline}");
+
+            // Чтение настроек
+            var settings = selectedDiscipline == "BIM"
+                ? settingsReader.ReadAll()
+                : settingsReader.ReadDiscipline(selectedDiscipline);
+
+            // Выбор заданий
+            var allSettings = settings.ContainsKey("ALL")
+                ? settings["ALL"]
+                : new List<ProjectSettings>();
+            var selectedTasks = ShowSelectionDialog(
+                allSettings.Select(s => s.DisplayName).ToList(),
+                selectedDiscipline,
+                multiselect: true);
+
+            if (selectedTasks == null || selectedTasks.Count == 0)
+            {  logWriter.Dispose(); return Result.Cancelled;}
+
+            var tasksRun = allSettings
+                .Where(s => selectedTasks.Contains(s.DisplayName))
+                .ToList();
+
+            // Выполнение заданий
+            _eventService.Subscribe();
+            try
+            {
+                foreach (var task in tasksRun)
+                    RunTask(task, logInfo, logWarning, logError);
+            }
+            finally
+            {
+                _eventService.Unsubscribe();
+                logWriter.Dispose();
+            }
+
+            // Вывод результатов
+            ShowResultReport();
+            return Result.Succeeded;
         }
 
         // 
