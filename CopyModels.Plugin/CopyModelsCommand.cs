@@ -54,7 +54,7 @@ namespace CopyModels.Plugin
             logInfo($"Revit User    : {app.Username}");
 
             // Проверка: нет открытых документов
-            if(!app.Documents.IsEmpty)
+            if (!app.Documents.IsEmpty)
             {
                 logError("Please run in a clear Revit session (no open models required).");
                 TaskDialog.Show("CopeModels", "Please close all Revit models before running.");
@@ -71,7 +71,7 @@ namespace CopyModels.Plugin
 
             // Путь к JSON конфигам
             var scriptPath = Path.GetDirectoryName(
-                typeof(CopyModelsCommand).Assembly.Location );
+                typeof(CopyModelsCommand).Assembly.Location);
             var settingsPath = Path.Combine(scriptPath, revitVersion);
             var settingsReader = new SettingsReader(settingsPath);
 
@@ -103,7 +103,7 @@ namespace CopyModels.Plugin
                 multiselect: true);
 
             if (selectedTasks == null || selectedTasks.Count == 0)
-            {  logWriter.Dispose(); return Result.Cancelled;}
+            { logWriter.Dispose(); return Result.Cancelled; }
 
             var tasksRun = allSettings
                 .Where(s => selectedTasks.Contains(s.DisplayName))
@@ -167,7 +167,63 @@ namespace CopyModels.Plugin
 
         private List<ModelSetting> BuildModelSettings(ProjectSettings task)
         {
-            throw new NotImplementedException();
+            // Получаем источники
+            List<string> sources;
+            if (FileService.IsRevitServer(task.SourcePath))
+                sources = _rsnService.ReadRevitServerModels(Path.GetDirectoryName(task.SourcePath));
+            else
+                sources = _fileService.ReadModels(task.SourcePath,task.PathExceptions);
+
+            // Получаем exceed-модели (есть в цели, нет в источники)
+            var exceedModels = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var tgt in task.TargetPaths)
+            {
+                var tgtList = FileService.IsRevitServer(tgt)
+                    ? _rsnService.ReadRevitServerModels(Path.GetDirectoryName(tgt))
+                    : _fileService.ReadModels(tgt,task.PathExceptions);
+                foreach (var m in tgtList) exceedModels.Add(m);
+            }
+
+            Func<string, double?> getDate = p =>
+                FileService.IsRevitServer(p)
+                    ? _rsnService.GetModelDate(p)
+                    : _fileService.GetModelDate(p);
+
+            var result = new List<ModelSetting>();
+            var srcDir = Path.GetDirectoryName(task.SourcePath);
+
+            foreach (var src in sources)
+            {
+                var modelName = Path.GetFileNameWithoutExtension(src);
+
+                // Применяем исключение
+                if (task.PathExceptions.Any(
+                    e => Path.GetDirectoryName(src)?.ToLower().Contains(e) == true))
+                    continue;
+                if (task.PathExceptions.Any(e => modelName.Contains(e)))
+                    continue;
+
+                // Строим целевые пути
+                var targets = BuildTargetPath(src, srcDir, task);
+                foreach (var t in targets) exceedModels.Remove(t.Split('>')[0]);
+
+                result.Add(new ModelSetting(src, targets, getDate));
+            }
+
+            // Добавляем exceed-модели
+            if (task.DeleteMissed)
+            {
+                foreach (var ex in exceedModels)
+                {
+                    var exName = Path.GetFileNameWithoutExtension(ex);
+                    if (task.PathExceptions.Any
+                        (e => Path.GetDirectoryName(ex)?.ToLower().Contains(e) == true)) continue;
+                    if (task.CopyExceptions.Any(e => exName.Contains(e))) continue;
+                    result.Add(new ModelSetting(ex, null, getDate));
+                }
+            }
+
+            return result;
         }
 
         private List<string> BuildTargetPath(
