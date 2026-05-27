@@ -172,7 +172,7 @@ namespace CopyModels.Plugin
             if (FileService.IsRevitServer(task.SourcePath))
                 sources = _rsnService.ReadRevitServerModels(Path.GetDirectoryName(task.SourcePath));
             else
-                sources = _fileService.ReadModels(task.SourcePath,task.PathExceptions);
+                sources = _fileService.ReadModels(task.SourcePath, task.PathExceptions);
 
             // Получаем exceed-модели (есть в цели, нет в источники)
             var exceedModels = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -180,7 +180,7 @@ namespace CopyModels.Plugin
             {
                 var tgtList = FileService.IsRevitServer(tgt)
                     ? _rsnService.ReadRevitServerModels(Path.GetDirectoryName(tgt))
-                    : _fileService.ReadModels(tgt,task.PathExceptions);
+                    : _fileService.ReadModels(tgt, task.PathExceptions);
                 foreach (var m in tgtList) exceedModels.Add(m);
             }
 
@@ -258,7 +258,7 @@ namespace CopyModels.Plugin
 
                 // ReplaceName
                 if (task.ReplaceName != null)
-                    foreach (var kv  in task.ReplaceName)
+                    foreach (var kv in task.ReplaceName)
                         targetPath = targetPath.Replace(kv.Key, kv.Value);
 
                 targets.Add(targetPath);
@@ -278,7 +278,144 @@ namespace CopyModels.Plugin
             Action<string> logWarning,
             Action<string> logError)
         {
-            throw new NotImplementedException();
+            var modelName = Path.GetFileNameWithoutExtension(model.SourcePath);
+            logInfo($"Processing: {modelName}");
+
+            // Exceed (удаление)
+            if (model.IsExceed)
+            {
+                if (task.BackupFolder != null)
+                {
+                    var archived = _fileService.ArchiveModel(
+                                                model.SourcePath,
+                                                task.BackupFolder);
+                    AddResult(task, modelName, "Archived", model.SourcePath, archived);
+                }
+                else
+                {
+                    _fileService.MarkReadWrite(model.SourcePath);
+                    File.Delete(model.SourcePath);
+                    AddResult(task, modelName, "Deleted", model.SourcePath, "");
+                }
+                return;
+            }
+
+            var srcExt = Path.GetExtension(model.SourcePath).ToUpper();
+
+            // Нужно открыть в Revit
+            if (task.Purge || model.IsOpenRequired())
+            {
+                Document doc = null;
+
+                try
+                {
+                    doc = srcExt == ".IFC"
+                        ? _modelService.OpenIfc(model.SourcePath)
+                        : _modelService.OpenWithDetach(model.SourcePath, task.CloseWorksetsMask);
+
+                    if (doc == null)
+                    {
+                        logError($"Could not open: {model.SourcePath}");
+                        return;
+                    }
+
+                    // Убедиться что есть NavisWorks вид
+                    var view = _modelService.GetViewByName(doc, "Navisworks");
+                    if (view == null)
+                        view = _modelService.Create3DView(doc, "Navisworks");
+
+                    if (task.Purge)
+                        _modelService.PurgeDocument(doc);
+
+                    foreach (var targetRaw in model.Targets)
+                    {
+                        var (targetPath, viewName) = ModelSetting.SplitTarget(targetRaw);
+                        var tgtExt = Path.GetExtension(targetPath).ToUpper();
+
+                        bool ok;
+                        if (tgtExt == ".RVT")
+                        {
+                            ok = _modelService.SaveAsRvt(doc, targetPath, task.BackupFolder);
+                        }
+                        else
+                        {
+                            ok = _modelService.ExportModel(
+                                doc,
+                                targetPath,
+                                task.BackupFolder,
+                                viewName,
+                                task.NwcAllProperties,
+                                task.NwcRoom,
+                                task.NwcDivideIntoLevels,
+                                task.NwcLinkedFiles,
+                                task.IfcSettings);
+                        }
+
+                        if (ok)
+                        {
+                            logInfo($"Saved: {targetPath}");
+                            AddResult(task,
+                                modelName,
+                                tgtExt == ".RVT"
+                                        ? "Saved RVT"
+                                        : $"Exported {tgtExt}",
+                                model.SourcePath,
+                                targetPath);
+
+                            if (task.Transmit.HasValue)
+                            {
+                                _modelService.TransmitModel(targetPath,
+                                                task.Transmit.Value,
+                                                task.RelativeLinks);
+                                if (task.Transmit == true)
+                                    _fileService.MarkReadOnly(targetPath);
+                            }
+                        }
+                        else
+                        {
+                            logError($"Export failed: {targetPath}");
+                        }
+                    }
+
+                }
+                finally
+                {
+                    if (doc != null)
+                        _modelService.RelinquishAndClose(doc);
+                }
+
+            }
+            // Простое копирование
+            else
+            {
+                foreach (var targetRaw in model.Targets)
+                {
+                    var (targetPath, _) = ModelSetting.SplitTarget(targetRaw);
+
+                    bool ok
+                    if (FileService.IsRevitServer(model.SourcePath) &&
+                        FileService.IsRevitServer(targetPath))
+                    { ok = _rsnService.CopyOnRevitServer(model.SourcePath, targetPath); }
+                    else
+                    { ok = _fileService.CopyFile(model.SourcePath, targetPath, task.BackupFolder); }
+
+                    if (ok)
+                    {
+                        AddResult(task, modelName, "Copied", model.SourcePath, targetPath);
+
+                        if (task.Transmit.HasValue)
+                        {
+                            _modelService.TransmitModel(targetPath, task.Transmit.Value, task.RelativeLinks);
+                            if (task.Transmit == true)
+                                _fileService.MarkReadOnly(targetPath);
+                        }
+                    }
+                    else
+                    {
+                        logError($"Copy failed: {model.SourcePath} -> {targetPath}");
+                    }
+                }
+            }
         }
 
         // 
