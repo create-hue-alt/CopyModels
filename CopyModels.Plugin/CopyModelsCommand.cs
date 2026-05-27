@@ -231,7 +231,40 @@ namespace CopyModels.Plugin
             string srcDir,
             ProjectSettings task)
         {
-            throw new NotImplementedException();
+            var targets = new List<string>();
+            var modelName = Path.GetFileNameWithoutExtension(srcPath);
+            var srcExt = Path.GetExtension(srcPath);
+
+            foreach (var tgtPattern in task.TargetPaths)
+            {
+                var tgtDir = Path.GetDirectoryName(tgtPattern);
+                var tgtExt = Path.GetExtension(tgtPattern);
+
+                string targetPath;
+                if (task.KeepStructure)
+                {
+                    var rel = PathUtils.GetRelativePath(srcDir, Path.GetDirectoryName(srcPath));
+                    targetPath = Path.Combine(tgtDir, rel, modelName + tgtExt);
+                }
+                else
+                {
+                    targetPath = Path.Combine(tgtDir, modelName + tgtExt);
+                }
+
+                // Нормализация слещей
+                targetPath = FileService.IsRevitServer(targetPath)
+                    ? targetPath.Replace("\\", "/")
+                    : targetPath.Replace("/", "\\");
+
+                // ReplaceName
+                if (task.ReplaceName != null)
+                    foreach (var kv  in task.ReplaceName)
+                        targetPath = targetPath.Replace(kv.Key, kv.Value);
+
+                targets.Add(targetPath);
+            }
+
+            return targets;
         }
 
         // 
@@ -283,7 +316,10 @@ namespace CopyModels.Plugin
         // Мини-утилита для относительных путей 
         internal static class PathUtils
         {
-
+            public static string GetRelativePath(string relativeTo, string path)
+            {
+                throw new NotImplementedException();
+            }
         }
 
     }
