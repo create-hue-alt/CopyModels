@@ -137,7 +137,28 @@ namespace CopyModels.Plugin
             Action<string> logWarning,
             Action<string> logError)
         {
-            throw new NotImplementedException();
+            logInfo($"Task: {task.Project} - {task.DisplayName}");
+            _resultTable[task.DisplayName] = new List<string[]>();
+
+            try
+            {
+                // Мапинг диска
+                if (task.MapDrive != null)
+                    _fileService.MapDrive(task.MapDrive, task.Drivepath);
+
+                if (task.SourcePath == null) return;
+
+                // Разрешаем {REQUEST} в путях (пропускаем в текущей версии - добавить UI при необходимости)
+                var models = BuildModelSettings(task);
+                if (models.Count == 0) return;
+
+                foreach (var model in models)
+                    ProcessModel(model, task, logInfo, logWarning, logError);
+            }
+            catch (Exception ex)
+            {
+                logError($"Task error [{task.DisplayName}]: {ex.Message}");
+            }
         }
 
         // 
