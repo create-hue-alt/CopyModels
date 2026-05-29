@@ -470,7 +470,9 @@ namespace CopyModels.Plugin
 
         private static void WriteLog(StreamWriter writer, string level, string message)
         {
-            throw new NotImplementedException();
+            var line = $"{DateTime.Now:yyyy.MM.dd HH:mm:ss} [{level}] {message}";
+            writer.WriteLine(line);
+            writer.Flush();
         }
 
         // Мини-утилита для относительных путей 
@@ -478,7 +480,13 @@ namespace CopyModels.Plugin
         {
             public static string GetRelativePath(string relativeTo, string path)
             {
-                throw new NotImplementedException();
+                if (!relativeTo.EndsWith("\\")) relativeTo += "\\";
+                var uri = new Uri(relativeTo);
+                var target = new Uri(path.EndsWith("\\") ? path : path + "\\");
+                return Uri.UnescapeDataString(
+                    uri.MakeRelativeUri(target)
+                    .ToString()
+                    .Replace('/','\\'));
             }
         }
 
