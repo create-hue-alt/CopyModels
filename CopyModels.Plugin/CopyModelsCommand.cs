@@ -427,14 +427,22 @@ namespace CopyModels.Plugin
             string model,
             string action,
             string from,
-            string to)
-        {
-            throw new NotImplementedException();
-        }
+            string to) =>
+        _resultTable[task.DisplayName].Add(new[] {model, action, $"From: {from}\nTo: {to}" });
 
         private void ShowResultReport()
         {
-            throw new NotImplementedException();
+            // В будущем - WPF окно. Пока - TaskDialog с кратким итогом.
+            var sb = new System.Text.StringBuilder();
+            foreach (var kv  in _resultTable)
+            {
+                sb.AppendLine($"=== {kv.Key}: ({kv.Value.Count} models) ===");
+                foreach (var row in kv.Value)
+                    sb.AppendLine($" [{row[1]}] {row[0]}");
+            }
+            TaskDialog.Show("CopyModels - Report", sb.Length > 0
+                                                        ? sb.ToString()
+                                                        : "No operation performed.");
         }
 
         private static List<string> ShowSelectionDialog(
@@ -442,7 +450,22 @@ namespace CopyModels.Plugin
             string title,
             bool multiselect)
         {
-            throw new NotImplementedException();
+            // TODO: заменить на WPF - диалог (CopyModels.UI).
+            // Временный вариант через TaskDialog (только для одиночного выбора).
+            if (!multiselect && items.Count <= 5)
+            {
+                var dlg = new TaskDialog(title);
+                for (int i = 0; i < Math.Min(items.Count, 4); i++)
+                    dlg.AddCommandLink((TaskDialogCommandLinkId)(1000 + i), items[i]);
+                var res = dlg.Show();
+                var idx = (int)res - 1000;
+                return idx >= 0 && idx < items.Count
+                    ? new List<string>() { items[idx] }
+                    : null;
+            }
+
+            // Для рефльного использования здесь будет Windows из CopyModels.UI
+            return items; // заглушка - вернгуть все
         }
 
         private static void WriteLog(StreamWriter writer, string level, string message)
