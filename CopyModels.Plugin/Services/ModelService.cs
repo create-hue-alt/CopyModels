@@ -183,10 +183,11 @@ namespace CopyModels.Plugin.Services
             Document doc,
             string targetPath,
             string archiveFolder = null,
-            string viewName = "navisworks",
+            string viewName = "Navisworks",
             bool nwcAllProperties = true,
             bool nwcRoom = false,
             bool nwcDivideIntoLevels = true,
+            bool nwcLinks = false,
             Dictionary<string, object> ifcSettings = null)
         {
             var ext = Path.GetExtension(targetPath).ToUpper();
@@ -251,7 +252,8 @@ namespace CopyModels.Plugin.Services
                         var nwcOpts = BuildNwcOptions(view,
                                                     nwcAllProperties,
                                                     nwcRoom,
-                                                    nwcDivideIntoLevels);
+                                                    nwcDivideIntoLevels,
+                                                    nwcLinks);
                         if (nwcOpts == null) return false;
 
                         _fileService.EnsureDirectory(tmpPath);

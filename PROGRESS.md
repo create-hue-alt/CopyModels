@@ -15,19 +15,19 @@ CopyModels.sln
 │   ├── Services/
 │   │   ├── FileService.cs          — копирование файлов, архив, маппинг диска (WinAPI) ✅
 │   │   ├── RevitServerService.cs   — HTTP запросы к Revit Server (RSN) ✅
-│   │   ├── ModelService.cs         — открытие / экспорт / сохранение моделей Revit ⏳
-│   │   └── EventService.cs         — подписка на события, автозакрытие диалогов ⏳
+│   │   ├── ModelService.cs         — открытие / экспорт / сохранение моделей Revit ✅
+│   │   └── EventService.cs         — подписка на события, автозакрытие диалогов ✅
 │   └── CopyModelsCommand.cs        — IExternalCommand, точка входа ⏳
 │
 ├── CopyModels.ConsoleTest          — тестирование Core логики (без Revit) ✅
-│   ├── Program.cs                  — тесты SettingsReader
-│   ├── TestRevitServer.cs          — тесты RevitServerService (сессия 7)
-│   └── TestConfigs/                — JSON файлы для тестирования
+│   ├── Program.cs
+│   ├── TestRevitServer.cs
+│   └── TestConfigs/
 │       ├── Architecture.json
 │       ├── Structure.json
 │       └── RealProject.json
 │
-└── CopyModels.UI                   — WPF интерфейс (этап 2) ⏳
+└── CopyModels.UI                   — WPF интерфейс (этап 2+3) ⏳
     ├── MainWindow.xaml
     └── ViewModels/
         └── MainViewModel.cs
@@ -52,10 +52,10 @@ CopyModels.sln
 | `read_setting_file()` | `Core/Settings/SettingsReader.cs` | ✅ |
 | `serverTools.py` (FILE часть) | `Plugin/Services/FileService.cs` | ✅ |
 | `serverTools.py` (RSN часть) | `Plugin/Services/RevitServerService.cs` | ✅ |
-| `modelTools.py` | `Plugin/Services/ModelService.cs` | ⏳ |
-| `eventsTools.py` | `Plugin/Services/EventService.cs` | ⏳ |
+| `modelTools.py` | `Plugin/Services/ModelService.cs` | ✅ |
+| `eventsTools.py` | `Plugin/Services/EventService.cs` | ✅ |
 | `script.py` (точка входа) | `Plugin/CopyModelsCommand.cs` | ⏳ |
-| `*.json` конфиги | без изменений | ✅ |
+| `*.json` конфиги | без изменений (этап 1) | ✅ |
 
 ## Чеклист реализации
 
@@ -68,300 +68,184 @@ CopyModels.sln
 
 ### Core/Tests ✅
 - [x] `CopyModels.ConsoleTest` — консольное тестирование
-- [x] Простые JSON конфиги для проверки
 - [x] 9 проверок SettingsReader — все пройдены ✅
-- [x] 4 теста RevitServerService — все пройдены ✅ (сессия 7)
+- [x] 4 теста RevitServerService — все пройдены ✅
 
-### Plugin/Services ✅✅
-- [x] `FileService.cs` — копирование файлов, архив, маппинг диска ✅
-- [x] `RevitServerService.cs` — HTTP запросы к Revit Server ✅
-  - [x] HttpClient (синхронный, встроен timeout)
-  - [x] ReadRevitServerModels() — рекурсивный обход папок
-  - [x] GetModelDate() — парсинг `/Date(...)` формата
-  - [x] CopyOnRevitServer() — копирование на RSN
-  - [x] Полная обработка ошибок и логирование
-- [x] `ModelService.cs` — открытие / экспорт / сохранение моделей
-- [x] `EventService.cs` — подавление диалогов Revit
+### Plugin/Services ✅
+- [x] `FileService.cs`
+- [x] `RevitServerService.cs`
+- [x] `ModelService.cs`
+- [x] `EventService.cs`
 
 ### Plugin ⏳
-- [ ] `CopyModelsCommand.cs`
+- [ ] `CopyModelsCommand.cs` ← ТЕКУЩИЙ ШАГ
 
-### UI (Этап 2) ⏳
-- [ ] `MainWindow.xaml`
-- [ ] `MainViewModel.cs`
-- [ ] Список заданий с галочками
-- [ ] Список моделей с галочками
-- [ ] Выбор форматов экспорта
+### UI + новый JSON (Этап 2+3) ⏳
+- [ ] `UserConfig` класс — структура UI-генерируемого JSON
+- [ ] WPF визард: выбор проекта → модели → форматы
+- [ ] Сохранение в `C:\Users\%User%\Documents\CopyModels\`
+- [ ] Command обновляется для чтения нового формата
 
-### Планировщик (Этап 3) ⏳
+### Планировщик (Этап 4) ⏳
 - [ ] Интеграция с Windows Task Scheduler
-- [ ] UI для настройки расписания
+- [ ] Чтение JSON из Documents без UI
+
+### PostgreSQL (Этап 5) ⏳
+- [ ] `SettingsRepository` — аналог `SettingsReader`, возвращает те же `ProjectSettings` из БД
+- [ ] Миграция конфигов из JSON в PostgreSQL (сервер уже есть)
+- [ ] Таблица истории запусков (когда, кто, какие модели, результат)
+- [ ] Общий доступ к конфигам с нескольких машин
+- [ ] `CopyModelsCommand` и все сервисы не меняются — только источник данных
 
 ---
 
 ## Журнал сессий
 
-### Сессия 1 — знакомство с проектом и архитектура
-
-**Дата:** (первая сессия)
-
-**Что сделали:**
-- Изучили все Python файлы оригинала
-- Составили архитектурную карту проекта
+### Сессия 1 — архитектура проекта
+- Изучили Python оригинал
 - Спроектировали структуру C# решения
-- Создали README.md и PROGRESS.md
+- Решение: JSON конфиги оставляем в том же формате
 
-**Принятые решения:**
-- JSON конфиги оставляем в том же формате
-- Архитектура: 3 проекта в Solution (Core, Plugin, UI)
-- Планировщик через Windows Task Scheduler
-- UI на WPF по паттерну MVVM
-
----
-
-### Сессия 2 — первый код, ProjectSettings.cs
-
-**Дата:** 13.04.2026
-
-**Что сделали:**
-- Пересмотрели архитектуру: уточнили границу Core / Plugin
-- Создали Solution в Visual Studio — два проекта `Core` и `Plugin`
-- Подключили `CopyModels.Core` как зависимость в `CopyModels.Plugin`
-- Разобрались зачем несколько проектов вместо папок
-- Начали писать `ProjectSettings.cs`
-
-**Разобранные концепции:**
-
-| Концепция | Суть |
-|---|---|
-| `.Core` / `.Plugin` в названии | Соглашение об именовании, не требование языка |
-| Несколько проектов в Solution | Физический контроль зависимостей — Core не может случайно импортировать Revit API |
-| `{ get; }` без setter | Свойство только для чтения, задаётся только в конструкторе |
-| `{ get; private set; }` | Читать можно снаружи, писать только внутри класса |
-| `bool?` (nullable) | Три состояния: true / false / null. Нужно для `Transmit` — отсутствие ≠ false |
-| `JObject` в конструкторе | Передаём весь JSON-блок, не 15 отдельных параметров |
-| `?.Value<string>()` | Безопасное чтение из JSON — если ключа нет, не падаем |
-| `?? false` | Значение по умолчанию если JSON вернул null |
-| `is JArray arr` | Проверка типа и каст в одну строку (pattern matching) |
-| `/// <summary>` | XML-документация — всплывает в IntelliSense при наведении |
-| `ReplacePlaceholders()` | Подставляет {PN}, {DATE}, {TIME} в пути при чтении |
-| `ParseStringList()` | Вспомогательный метод для чтения массивов строк из JSON |
-
-**Написанный код:**
-- Все поля `ProjectSettings` описаны
-- Конструктор: `Discipline`, `Project`, `SourcePath` (с ReplacePlaceholders), `TargetPath` (JArray), `BackupFolder`, `Purge`, `KeepStructure`, `DeleteMissed`, `Transmit`
-- Методы: `ReplacePlaceholders()`, `ParseStringList()`
-
----
+### Сессия 2 — ProjectSettings.cs (13.04.2026)
+- Создали Solution, два проекта Core и Plugin
+- Написали `ProjectSettings.cs`
+- Концепции: nullable bool?, JObject, pattern matching, XML-документация
 
 ### Сессия 3 — ModelSetting.cs
+- Написали `ModelSetting.cs`
+- `DisplayName` форматируется для UI
 
-**Что сделали:**
-- Полностью написаны классы `ProjectSettings` и `ModelSetting`
+### Сессия 4 — SettingsReader.cs + тестирование (21.04.2026)
+- `SettingsReader.cs` + ConsoleTest проект
+- Все 6 проверок пройдены ✅
 
-**Ключевые вещи:**
-- `ProjectSettings` содержит все параметры одного задания из JSON
-- `ModelSetting` содержит информацию об одной модели (источник + целевые пути)
-- `DisplayName` форматируется красиво с отступами для UI
+### Сессия 5 — FileService.cs (10.05.2026)
+- Полный `FileService.cs` — файловая система, архив, маппинг диска
+- P/Invoke, DllImport, WNetAddConnection2
+- **Ключевое решение:** FileService / RevitServerService / ModelService — три отдельных сервиса
 
----
+### Сессия 6 — HTTP + RevitServerService.cs (18.05.2026)
+- Курс по HTTP в C# (WebRequest vs HttpClient)
+- Переделали на HttpClient синхронный
 
-### Сессия 4 — SettingsReader.cs и первое тестирование ✅
+### Сессия 7 — Тестирование RevitServerService (20.05.2026)
+- 4 теста, все пройдены ✅
+- Реальный запрос к `RSN://k-2133.atptlp.local/20175_INARCTICA` — 13 моделей
 
-**Дата:** 21.04.2026
+### Сессия 8 — ModelService.cs
+- 620 строк: открытие, экспорт, сохранение, purge, transmit, worksets, виды
+- NWC(void) vs IFC(bool) — разные подходы проверки результата
+- CheckAndFixView() перед ExportModel() — избегаем вложенных транзакций
 
-**Что сделали:**
-- Написали `SettingsReader.cs` — главный класс для чтения JSON конфигов
-- Создали `CopyModels.ConsoleTest` проект для тестирования
-- Создали простые JSON файлы с тестовыми данными
-- Написали полный `Program.cs` с 6 проверками
-- **Запустили и ВСЕ ПРОВЕРКИ ПРОЙДЕНЫ!** ✅
+### Сессия 9 — EventService.cs
+- Subscribe/Unsubscribe с guard проверкой
+- IDisposable паттерн — `using()` блок
+- Два Application объекта: `Application` для FailuresProcessing, `UIApplication` для DialogBoxShowing
+- Логирование через callbacks
 
-**Результаты тестирования:**
+### Сессия 10 — Анализ Python оригинала + планирование (27.05.2026)
+
+**Разобрали полностью `Copy_Models_script.py`.**
+
+#### Как работает Python скрипт (важно для C# реализации)
+
+**Откуда берётся `discipline`:**
+`discipline` = имя JSON файла без расширения (`AR.json` → `"AR"`).
+Сохраняется в pyrevit config между запусками. `Shift+Click` → смена дисциплины.
+`"!BIM!"` — специальный режим, читаются все JSON файлы сразу.
+
+**Трёхуровневая структура выбора:**
 ```
-✓ Проверка 1: найдено 2 дисциплины (Architecture, Structure)
-✓ Проверка 2: дисциплины найдены в списке
-✓ Проверка 3: Architecture содержит ProjectA и ProjectB
-✓ Проверка 4: Architecture содержит 3 задания
-✓ Проверка 5: ReadAll() содержит 5 заданий
-✓ Проверка 6: DisplayName не пустой и отформатирован
+1. Выбор дисциплины (файл конфига) — сохраняется между запусками
+2. Выбор заданий — SelectFromList, multiselect, группировка по проекту
+3. Выбор моделей — для каждого задания отдельно, "Not Actual" по умолчанию
 ```
 
-**Что делает SettingsReader:**
-1. `GetDisciplineNames()` — возвращает список имён дисциплин (.json файлы)
-2. `ReadDiscipline(name)` — читает одну дисциплину
-3. `ReadAll()` — читает все дисциплины сразу
-4. Возвращает `Dictionary<string, List<ProjectSettings>>` с ключами "ALL", "ProjectA", "ProjectB" и т.д.
-5. Автоматически сортирует по `DisplayName`
+**Три ветки логики обработки модели:**
+```
+is_exceed == true
+    → удалить или архивировать (модель есть в Target, но нет в Source)
 
-**Разобранные концепции:**
-- `Directory.GetFiles()` — поиск файлов по маске
-- `Path.GetFileNameWithoutExtension()` — получить имя без расширения
-- `JObject.Parse()` — парсить JSON
-- `foreach (var projectProp in root.Properties())` — итерация по объектам JSON
-- `IReadOnlyList<T>` — возвращаемый тип (только для чтения)
+purge == true ИЛИ is_open_required() == true
+    → открыть Revit → purge → экспорт/сохранение → закрыть
+    (is_open_required: Source extension ≠ Target extension, или путь RSN)
+
+иначе
+    → простое копирование файла без открытия Revit
+```
+
+**Полный flow ветки "открыть Revit":**
+```
+1. Открыть (open_model_with_detach или open_ifc)
+2. Если IFC → divide_on_worksets, get_coordinates
+3. Найти/создать вид "NavisWorks"
+4. Если purge → clean_revit_file(doc)
+5. Для каждого target:
+   - .RVT → save_rvt()
+   - same extension → file_server_copy_model()
+   - другое расширение → export_rvt() [NWC или IFC]
+   - если transmit → transmit_model() + mark_ro()
+6. relinquish_doc() → Close() → Dispose()
+```
+
+**Решения принятые в сессии 10:**
+
+1. **JSON остаётся центром архитектуры.** Меняется только кто создаёт JSON — вручную сейчас, UI в будущем.
+
+2. **Этапы 2+3 идут параллельно** — UI создаёт JSON, Command читает новый формат. Разрывать нельзя.
+
+3. **Новый JSON формат добавит блок `Schedule`:**
+   ```json
+   "Schedule": { "Enabled": true, "DayOfWeek": "Monday", "Time": "23:00" }
+   ```
+   Старые конфиги продолжают работать без изменений.
+
+4. **Про дублирующиеся задания в реальном конфиге** (например `"From RVT RS to RVT FS"` и `"From RVT RS to RVT FS (purged)"`) — в UI-версии это будет одна запись с галочкой Purge.
+
+**Скелет CopyModelsCommand.cs:**
+```csharp
+public Result Execute(ExternalCommandData commandData, ...)
+{
+    var app = commandData.Application.Application;
+    var uiApp = commandData.Application;
+
+    using (var eventService = new EventService(app, uiApp, Log, LogWarning))
+    {
+        eventService.Subscribe();
+        var discipline = SelectDiscipline();              // уровень 1
+        var settings = SettingsReader.ReadDiscipline(...);
+        var selectedTasks = SelectTasks(settings);        // уровень 2
+        foreach (var task in selectedTasks)
+        {
+            var models = task.GetModelsSettings();        // уровень 3
+            foreach (var model in models)
+                ProcessModel(task, model, app);           // три ветки
+        }
+    }
+    return Result.Succeeded;
+}
+```
 
 ---
-
-### Сессия 5 — FileService.cs ✅
-
-**Дата:** 10.05.2026
-
-**Что сделали:**
-- Написали полный `FileService.cs` — все операции с файловой системой
-- Исправили опечатки и логические ошибки в откатывании архива
-- Добавили правильное использование UTC времени для дат
-- Реализовали маппинг сетевых дисков через Windows API
-- Уточнили разделение ответственности между сервисами
-
-**Разобранные концепции:**
-
-| Концепция | Суть |
-|---|---|
-| `LastWriteTimeUtc` вместо `LastWriteTime` | Всегда UTC, не зависит от локального времени машины |
-| `File.Move(src, dst, overwrite: true)` | Перемещение файла с опцией перезаписи |
-| `EnsureUniquePath()` | Проверка уникальности пути — добавляет `_1`, `_2` если файл существует |
-| `Path.IsPathRooted()` | Проверка абсолютности пути |
-| Плейсхолдеры архива | `{MODEL_NAME}` и `{MODEL_DATE}` в пути архива |
-| P/Invoke и DllImport | Вызов функций Windows API из C# (mpr.dll) |
-| NETRESOURCE структура | Полное описание сетевого ресурса для WNetAddConnection2 |
-| Нормализация driveLetter | `TrimEnd('\\', ':') + ":"` для единообразия |
-
-**Ключевое решение — разделение ответственности (см. раздел ниже):**
-- `FileService` — ТОЛЬКО операции с файлами
-- `RevitServerService` — ТОЛЬКО операции с Revit Server
-- `ModelService` — выбирает нужный сервис по типу пути
-
-
-**Добавлено в код:**
-- XML-документация `/// <summary>` для всех public методов
-- Детальные комментарии в P/Invoke декларациях
-- Логирование с полной информацией об ошибках
-- Try-catch блоки в критических методах
-
----
-
-### Сессия 6 — HTTP запросы и RevitServerService.cs ✅
-
-**Дата:** 18.05.2026
-
-**Что сделали:**
-- Создали полный курс "HTTP запросы в C#" (11 документов)
-- Разобрались с асинхронностью в контексте проекта
-- Выяснили как работает progress bar с синхронным кодом
-- Переделали RevitServerService с WebRequest на HttpClient
-- Исправили все ошибки в коде
-
----
-
-### Сессия 7 — Тестирование RevitServerService ✅ **[НОВОЕ]**
-
-**Дата:** 20.05.2026
-
-**Что сделали:**
-- Создали класс `TestRevitServer` в ConsoleTest проекте
-- Написали 4 теста для RevitServerService:
-  - **Тест 1:** ExtractServer — парсинг RSN пути ✅
-  - **Тест 2:** BuildBaseUrl — формирование REST API URL ✅
-  - **Тест 3:** Логирование callback-ов ✅
-  - **Тест 4:** Реальный запрос к Revit Server ✅
-- Все тесты успешно прошли
-- **Результат:** 13 моделей успешно прочитаны с реального сервера `RSN://k-2133.atptlp.local/20175_INARCTICA`
-
-**Проверки (Assertions):**
-- ✅ 3 дисциплины найдены
-- ✅ SettingsReader правильно парсит конфиги
-- ✅ RevitServerService корректно работает с REST API
-- ✅ Рекурсивный обход папок функционирует
-
-**Технические детали:**
-- Использована рефлексия для тестирования private методов
-- Callback-функции для логирования работают
-- HTTP запросы к реальному Revit Server успешны
-- Парсинг дат в формате Revit Server (`/Date(...)`) работает
 
 ## Разделение ответственности между сервисами
 
-Это ключевое архитектурное решение, принятое в сессии 5.
-
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│ ModelService (ТОЧКА ВХОДА)                                      │
-│ ├─ GetModelDate(anyPath)     ← проверяет тип пути              │
-│ ├─ CopyModel(source, target) ← выбирает алгоритм               │
-│ ├─ ReadModels(path)          ← выбирает алгоритм               │
-│ └─ Зависит от FileService + RevitServerService                 │
-│                                                                  │
-│  ┌──────────────────┐          ┌──────────────────────────┐    │
-│  │ FileService      │          │ RevitServerService       │    │
-│  │ (ФАЙЛЫ)          │          │ (REVIT SERVER / RSN)     │    │
-│  ├─ GetModelDate()  │          ├─ GetModelDate()          │    │
-│  ├─ CopyFile()      │          ├─ ReadRevitServerModels() │    │
-│  ├─ ArchiveModel()  │          ├─ CopyOnRevitServer()     │    │
-│  ├─ MarkReadWrite() │          └─ HTTP REST запросы       │    │
-│  ├─ ReadFileServerModels() │                               │    │
-│  └─ MapDrive()      │                                       │    │
-│     (Windows API)   │                                       │    │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────┐
+│ ModelService (ТОЧКА ВХОДА)                          │
+│ ├─ GetModelDate(anyPath)  ← проверяет тип пути      │
+│ ├─ CopyModel(src, dst)    ← выбирает алгоритм       │
+│ └─ Зависит от FileService + RevitServerService      │
+│                                                     │
+│  ┌───────────────┐     ┌────────────────────────┐   │
+│  │ FileService   │     │ RevitServerService     │   │
+│  │ (ФАЙЛЫ)       │     │ (REVIT SERVER / RSN)   │   │
+│  └───────────────┘     └────────────────────────┘   │
+└─────────────────────────────────────────────────────┘
 
-FilePath: P:\Projects\Model.rvt        → FileService
-RSN Path: RSN://server/folder/Model.rvt → RevitServerService
+P:\Projects\Model.rvt          → FileService
+RSN://server/folder/Model.rvt  → RevitServerService
 ```
-
-## Сессия 8: ModelService.cs ✅
-
-### ✅ Реализовано (620 строк кода)
-
-- OpenWithDetach() — RVT с детачем + worksets
-- OpenIfc() — открытие IFC файлов
-- SaveAsRvt() — сохранение как Central с архивом
-- ExportModel() — NWC/IFC (обработка void vs bool)
-- PurgeDocument() — очистка через PerformanceAdviser
-- TransmitModel() — transmit + relative links
-- Виды: GetViewByName(), Create3DView(), CheckAndFixView()
-- Опции: BuildNwcOptions(12) + BuildIfcOptions(30+)
-- ApplyWorksetConfiguration() — открытие/закрытие worksets
-
-### 🔑 Ключевые решения
-
-1. **Архивирование ДО экспорта** — старый файл в архиве при падении
-2. **Проверка файла для обоих форматов** — NWC(void) + IFC(bool)
-3. **Избегаем вложенных транзакций** — CheckAndFixView() перед экспортом
-4. **Разные подходы опций** — NWC(properties) vs IFC(AddOption)
-
----
-
-## Сессия 9: EventService.cs
-
-**Что сделали**
-- EventService.cs — полная реализация
-- OnFailureProcessing() — обработка ошибок
-- OnDialogBoxShowing() — подавление диалогов
-
-**Ключевое решение**
-1. Два типа Application в EventService:
-    - FailuresProcessing → Application._app
-    - DialogBoxShowing → UIApplication._uiApp
-2. Guard проверка при Subscribe:
-    - if (_subscribed) return;  // Избегаем двойной подписки
-3. IDisposable паттерн:
-    - Позволяет использовать using() блок
-    - Автоматическая отписка от событий
-4. Логирование через callbacks:
-    - Не привязано к конкретной системе логирования
-    - Гибко подстраивается под разные логгеры
-
-## Следующие шаги:
-
-CopyModelsCommand.cs — IExternalCommand точка входа:
-
-    - Инициализация всех сервисов
-    - Чтение конфигов JSON
-    - Выбор заданий через TaskDialog
-    - Выбор форматов (NWC/IFC/RVT)
-    - Запуск копирования/экспорта
-    - EventService регистрация для автоматической обработки
-    - Логирование результатов
 
 ---
 
@@ -370,8 +254,6 @@ CopyModelsCommand.cs — IExternalCommand точка входа:
 - [Revit API Docs](https://www.revitapidocs.com/)
 - [Revit API Forum](https://forums.autodesk.com/t5/revit-api-forum/bd-p/160)
 - [MVVM паттерн](https://learn.microsoft.com/ru-ru/dotnet/architecture/maui/mvvm)
-- [Newtonsoft.Json документация](https://www.newtonsoft.com/json/help/html/Introduction.htm)
+- [Newtonsoft.Json](https://www.newtonsoft.com/json/help/html/Introduction.htm)
 - [P/Invoke и DllImport](https://learn.microsoft.com/en-us/dotnet/standard/native-interop/pinvoke)
-- [Windows API mpr.dll](https://learn.microsoft.com/en-us/windows/win32/api/winnetwk/nf-winnetwk-wnetaddconnection2w)
 - [HttpClient в C#](https://learn.microsoft.com/ru-ru/dotnet/api/system.net.http.httpclient)
-- [REST API тестирование](https://www.postman.com/)

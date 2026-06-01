@@ -11,7 +11,7 @@
 
 ### Оригинал (Python) — реализовано
 - Чтение настроек дисциплин из JSON конфигов
-- Выбор заданий и моделей через UI
+- Выбор заданий и моделей через UI (трёхуровневый)
 - Копирование моделей между файловыми серверами
 - Копирование моделей с/на Revit Server (RSN)
 - Экспорт в форматы: NWC, RVT, IFC
@@ -23,20 +23,34 @@
 - Отправка email-отчёта
 
 ### C# версия — в разработке
-- [x] Архитектура проекта спроектирована
-- [x] `ProjectSettings.cs` — класс данных одного задания ✅
-- [x] `ModelSetting.cs` — класс данных одной модели ✅
-- [x] `SettingsReader.cs` — чтение JSON конфигов ✅
-- [x] `CopyModels.ConsoleTest` — тестирование Core логики ✅
-- [x] `FileService.cs` — копирование файлов, архив, маппинг диска ✅
-- [x] `RevitServerService.cs` — HTTP запросы к Revit Server REST API ✅ **[сессия 6-7]**
-- [x] `ModelService.cs` — открытие / экспорт / сохранение моделей ✅ **[сессия 8]**
-- [x] `EventService.cs` — подавление диалогов и ошибок ✅ **[сессия 9]**
-- [ ] `CopyModelsCommand.cs` — точка входа плагина ⏳ **[сессия 10]**
-- [ ] WPF интерфейс с галочками
-- [ ] Планировщик (Windows Task Scheduler)
 
-## Структура проекта
+**Этап 1 — рабочий плагин (в процессе)**
+- [x] `ProjectSettings.cs` ✅
+- [x] `ModelSetting.cs` ✅
+- [x] `SettingsReader.cs` ✅
+- [x] `FileService.cs` ✅
+- [x] `RevitServerService.cs` ✅
+- [x] `ModelService.cs` ✅
+- [x] `EventService.cs` ✅
+- [ ] `CopyModelsCommand.cs` ⏳ — точка входа, сессия 10
+
+**Этап 2+3 — UI + новый JSON формат (параллельно)**
+- [ ] WPF визард создания конфига
+- [ ] `UserConfig` класс — UI-генерируемый JSON
+- [ ] Сохранение в `C:\Users\%User%\Documents\CopyModels\`
+
+**Этап 4 — Планировщик**
+- [ ] Windows Task Scheduler интеграция
+- [ ] Автозапуск по расписанию без UI
+
+**Этап 5 — PostgreSQL вместо JSON**
+- [ ] `SettingsRepository` — новый класс, возвращает те же `ProjectSettings` из БД
+- [ ] Миграция конфигов из JSON в PostgreSQL (уже есть на предприятии)
+- [ ] История запусков — когда, кто, какие модели, результат
+- [ ] Общий доступ к конфигам проектов с нескольких машин
+- [ ] Все сервисы и Command остаются без изменений
+
+## Архитектура
 
 ```
 CopyModels.sln
@@ -50,100 +64,69 @@ CopyModels.sln
 ├── CopyModels.Plugin         — требует RevitAPI.dll
 │   ├── Services/
 │   │   ├── FileService.cs                ✅
-│   │   ├── RevitServerService.cs         ✅ [сессия 6-7]
-│   │   ├── ModelService.cs               ✅ [сессия 8]
-│   │   └── EventService.cs               ✅ [сессия 9]
-│   └── CopyModelsCommand.cs              ⏳ [сессия 10]
+│   │   ├── RevitServerService.cs         ✅
+│   │   ├── ModelService.cs               ✅
+│   │   └── EventService.cs               ✅
+│   └── CopyModelsCommand.cs              ⏳
 │
 ├── CopyModels.ConsoleTest    — тестирование Core (без Revit) ✅
 │   ├── Program.cs
-│   ├── TestRevitServer.cs                ✅
+│   ├── TestRevitServer.cs
 │   └── TestConfigs/
-│       ├── Architecture.json
-│       ├── Structure.json
-│       └── RealProject.json
 │
-└── CopyModels.UI             — WPF интерфейс (этап 2) ⏳
-    ├── MainWindow.xaml
-    └── ViewModels/
-        └── MainViewModel.cs
+└── CopyModels.UI             — WPF интерфейс (этап 2+3) ⏳
 ```
+
+## Как работает оригинальный Python плагин
+
+### Трёхуровневый выбор
+
+```
+1. Выбор дисциплины = выбор JSON файла конфига
+   (сохраняется между запусками, Shift+Click для смены)
+        ↓
+2. Выбор заданий из JSON (multiselect, группировка по проекту)
+        ↓
+3. Для каждого задания — выбор моделей (по умолчанию "Not Actual")
+        ↓
+4. Обработка каждой модели
+```
+
+### Три ветки логики обработки
+
+```
+is_exceed → удалить/архивировать (модель исчезла из Source)
+purge OR is_open_required → открыть Revit → обработать → закрыть
+иначе → простое копирование файла
+```
+
+## Стратегия JSON конфигов
+
+JSON остаётся единственным источником правды. Меняется только **кто его создаёт**:
+
+| Этап | Кто создаёт JSON | Где лежит |
+|------|-----------------|-----------|
+| Сейчас | Вручную | На файловом сервере |
+| Этап 2+3 | WPF UI | `C:\Users\%User%\Documents\CopyModels\` |
+| Этап 4 | Планировщик читает | Тот же Documents |
+| Этап 5 | PostgreSQL | `SettingsRepository` вместо `SettingsReader`, все сервисы не меняются |
+
+`SettingsReader` не меняется — читает оба формата.
 
 ## Требования
 
 - Autodesk Revit 2022+
 - .NET Framework 4.8
-- Navisworks Exporter (для экспорта NWC)
-- IFC Exporter (для экспорта IFC)
+- Navisworks Exporter (для NWC)
+- IFC Exporter (для IFC)
 - Newtonsoft.Json (NuGet)
 
 ## Оригинальный проект (Python)
 
-| Python файл | Назначение |
-|---|---|
-| `Copy_Models_script.py` | Точка входа, основная логика |
-| `settings_classes.py` | Классы ProjectSettings и ModelSetting |
-| `modelTools.py` | Работа с Revit API |
-| `serverTools.py` | Файловая система и Revit Server |
-| `eventsTools.py` | Обработка диалогов и ошибок |
-
-## Текущий статус (сессия 9)
-
-### ✅ EventService.cs — ПОЛНОСТЬЮ ГОТОВ
-
-**Архитектура:**
-- Два разных Application объекта:
-  - `Application` для `FailuresProcessing` события
-  - `UIApplication` для `DialogBoxShowing` события
-- Subscribe/Unsubscribe паттерн с guard проверкой
-- IDisposable для автоматической очистки
-
-**Обработка ошибок (OnFailureProcessing):**
-- DeleteAllWarnings() для очистки неважных ошибок
-- Специфическая обработка трёх типов ошибок:
-  - LinearConstraintNotParallel → ResolveFailure()
-  - DimensionReferencesInvalid → SetCurrentResolutionType(FixElements)
-  - GenericNonFatalError → логируем и игнорируем
-- Логирование необработанных ошибок с Guid для анализа
-
-**Подавление диалогов (OnDialogBoxShowing):**
-- TaskDialog_Missing_Third_Party_Updater(s) → CommandLink1
-- TaskDialog_Unresolved_References → CommandLink2
-- TaskDialog_Update_Resources / TaskDialog_Macro_Security_Alert → CommandLink1
-- Dialog_Revit_DocWarnDialog / пусто → Close
-- Неизвестные диалоги → логирование с просьбой отчета
-
-### ⏳ Следующие этапы
-
-1. **CopyModelsCommand.cs** (сессия 10) — точка входа плагина
-   - Инициализация сервисов (FileService, RevitServerService, ModelService, EventService)
-   - Чтение JSON конфигов и выбор заданий
-   - Выбор форматов экспорта (NWC/IFC/RVT)
-   - Скоординированная работа всех сервисов
-   - Логирование результатов
-
-2. **WPF интерфейс** (этап 2) — выбор заданий и форматов
-   - MainWindow с галочками для форматов
-   - TreeView для выбора заданий
-   - Progress bar для отслеживания
-   - Вывод логов
-
-3. **Планировщик** (этап 3) — Windows Task Scheduler
-   - Интеграция с расписанием
-   - Автозапуск по расписанию
-
-## Прогресс
-
-| Компонент | Статус | Сессия |
-|-----------|--------|--------|
-| Core (ProjectSettings + ModelSetting + SettingsReader) | ✅ | 1-4 |
-| FileService | ✅ | 5 |
-| RevitServerService | ✅ | 6-7 |
-| ModelService | ✅ | 8 |
-| EventService | ✅ | 9 |
-| CopyModelsCommand | ⏳ | 10 |
-| WPF UI | ⏳ | 11+ |
-| Scheduler | ⏳ | 12+ |
-
-**Завершено:** 60% основной логики (все сервисы готовы)  
-**Осталось:** CopyModelsCommand + WPF UI + Scheduler
+| Python файл | C# аналог | Статус |
+|---|---|---|
+| `Copy_Models_script.py` | `CopyModelsCommand.cs` | ⏳ |
+| `settings_classes.py` | `ProjectSettings.cs` + `ModelSetting.cs` | ✅ |
+| `modelTools.py` | `ModelService.cs` | ✅ |
+| `serverTools.py` | `FileService.cs` + `RevitServerService.cs` | ✅ |
+| `eventsTools.py` | `EventService.cs` | ✅ |
