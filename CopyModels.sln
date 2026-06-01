@@ -7,6 +7,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	ProjectSection(SolutionItems) = preProject
 		Architecture_CopyModels__flow-html.md = Architecture_CopyModels__flow-html.md
 		CLAUDE.md = CLAUDE.md
+		CopyModels.addin = CopyModels.addin
 		PROGRESS.md = PROGRESS.md
 		README.md = README.md
 	EndProjectSection

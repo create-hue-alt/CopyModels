@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices.ComTypes;
 
 namespace CopyModels.Core.Models
 {
@@ -130,10 +131,20 @@ namespace CopyModels.Core.Models
         /// </summary>
         public static (string path, string view) SplitTarget(string raw)
         {
+            /*
             var idx= raw.IndexOf('>');
             return idx < 0
-                ? (raw, "navisworks")
+                ? (raw, "Navisworks")
                 : (raw.Substring(0, idx), raw.Substring(idx + 1));
+            */
+
+            if (string.IsNullOrEmpty(raw)) return (null, null);
+
+            var parts = raw.Split(new[] {'>'}, StringSplitOptions.None );
+            var path = parts[0].Trim();
+            var view = parts.Length > 1 ? parts[1].Trim() : null;
+
+            return (path, view);
         }
 
         public override string ToString() => DisplayName;

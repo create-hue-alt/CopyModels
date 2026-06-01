@@ -22,7 +22,7 @@ namespace CopyModels.Core.Models
 
         // Маппинг диска
         public string MapDrive { get; }    // например "P:"
-        public string Drivepath { get; }    // UNC-путь, который нужно подмониторить
+        public string DrivePath { get; }    // UNC-путь, который нужно подмониторить
 
         // Путь источника к цели
         public string SourcePath { get; }    // Может быть null
@@ -94,7 +94,7 @@ namespace CopyModels.Core.Models
 
             // Маппинг диска
             MapDrive = settings["Map Drive"]?.Value<string>();
-            Drivepath = ReplacePlaceholders( settings["Drive Path"]?.Value<string>(), 
+            DrivePath = ReplacePlaceholders( settings["Drive Path"]?.Value<string>(), 
                                              project,
                                              now);
 

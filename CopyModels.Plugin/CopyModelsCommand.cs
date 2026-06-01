@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -70,10 +71,11 @@ namespace CopyModels.Plugin
             _resultTable = new Dictionary<string, List<string[]>>();
 
             // Путь к JSON конфигам
-            var scriptPath = Path.GetDirectoryName(
-                typeof(CopyModelsCommand).Assembly.Location);
-            var settingsPath = Path.Combine(scriptPath, revitVersion);
-            var settingsReader = new SettingsReader(settingsPath);
+            var documentPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                "CopyModels");
+
+            var settingsReader = new SettingsReader(documentPath);
 
             // Выбор дисциплины
             var disciplines = settingsReader.GetDisciplineNames().ToList();
@@ -144,7 +146,7 @@ namespace CopyModels.Plugin
             {
                 // Мапинг диска
                 if (task.MapDrive != null)
-                    _fileService.MapDrive(task.MapDrive, task.Drivepath);
+                    _fileService.MapDrive(task.MapDrive, task.DrivePath);
 
                 if (task.SourcePath == null) return;
 
@@ -343,7 +345,7 @@ namespace CopyModels.Plugin
                                 doc,
                                 targetPath,
                                 task.BackupFolder,
-                                viewName,
+                                viewName ?? "Navisworks",
                                 task.NwcAllProperties,
                                 task.NwcRoom,
                                 task.NwcDivideIntoLevels,
@@ -392,7 +394,7 @@ namespace CopyModels.Plugin
                 {
                     var (targetPath, _) = ModelSetting.SplitTarget(targetRaw);
 
-                    bool ok
+                    bool ok;
                     if (FileService.IsRevitServer(model.SourcePath) &&
                         FileService.IsRevitServer(targetPath))
                     { ok = _rsnService.CopyOnRevitServer(model.SourcePath, targetPath); }
@@ -452,6 +454,8 @@ namespace CopyModels.Plugin
         {
             // TODO: заменить на WPF - диалог (CopyModels.UI).
             // Временный вариант через TaskDialog (только для одиночного выбора).
+
+            /*
             if (!multiselect && items.Count <= 5)
             {
                 var dlg = new TaskDialog(title);
@@ -465,7 +469,36 @@ namespace CopyModels.Plugin
             }
 
             // Для рефльного использования здесь будет Windows из CopyModels.UI
-            return items; // заглушка - вернгуть все
+            return items; // заглушка - вернгуть все 
+            */
+
+            // Одиночный выбор через TaskDualog
+            if (!multiselect)
+            {
+                if (items.Count == 0) return null;
+                if (items.Count == 1) return new List<string> { items[0] };
+
+                var dlg = new TaskDialog(title);
+                dlg.MainInstruction = $"Select one from {items.Count} items";
+
+                for (int i = 0; i < Math.Min(items.Count, 10); i++)
+                {
+                    dlg.AddCommandLink(
+                        (TaskDialogCommandLinkId)(1000 + i),
+                        items[i]);
+                }
+
+                var result = dlg.Show();
+                var idx = (int)result - 1000;
+                return idx >= 0 && idx < items.Count
+                    ? new List<string> { items[idx] } 
+                    : null;
+            }
+
+            // Multiselect: временно возвращает все
+            // (пототм будет WPF окно с чекбоксами)
+            
+            return items;
         }
 
         private static void WriteLog(StreamWriter writer, string level, string message)
