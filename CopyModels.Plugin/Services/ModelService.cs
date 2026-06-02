@@ -55,7 +55,7 @@ namespace CopyModels.Plugin.Services
             }
             catch (Exception ex)
             {
-                _logError($"OpenWithDetach filed: {ex.Message}\n{path}");
+                _logError($"OpenWithDetach failed: {ex.Message}\n{path}");
                 return null;
             }
         }
@@ -105,7 +105,7 @@ namespace CopyModels.Plugin.Services
             try
             {
                 RelinquishOwnership(doc);
-                doc.Close();
+                doc.Close(false);
                 _logInfo("Document closed");
 
             }
@@ -201,10 +201,10 @@ namespace CopyModels.Plugin.Services
 
             // Найти вид
             var view = GetViewByName(doc, viewName);
-            if (view == null && viewName.Equals("navisworks", StringComparison.OrdinalIgnoreCase))
+            if (view == null && viewName.Equals("Navisworks", StringComparison.OrdinalIgnoreCase))
             {
-                _logWarning($"No NavisWorks view found in {doc.Title}, creating new.");
-                view = Create3DView(doc, "NavisWorks");
+                _logWarning($"No Navisworks view found in {doc.Title}, creating new.");
+                view = Create3DView(doc, "Navisworks");
             }
             if (view == null)
             {
@@ -325,7 +325,7 @@ namespace CopyModels.Plugin.Services
         // Purge
         // 
 
-        /// <summary>Выполняет purge модели через PerformanceAdvisir</summary>
+        /// <summary>Выполняет purge модели через PerformanceAdviser</summary>
         public int PurgeDocument(Document doc)
         {
             var purgeGuid = new Guid("e8c63650-70b7-435a-9010-ec97660c1bda");
@@ -597,11 +597,11 @@ namespace CopyModels.Plugin.Services
                 var info = BasicFileInfo.Extract(pathString);
                 if (!info.IsWorkshared || !info.IsCentral) return;
 
-                var worsets = WorksharingUtils.GetUserWorksetInfo(modelPath);
+                var worksets = WorksharingUtils.GetUserWorksetInfo(modelPath);
                 var config = new WorksetConfiguration(WorksetConfigurationOption.CloseAllWorksets);
                 var toOpen = new List<WorksetId>();
 
-                foreach ( var ws in worsets )
+                foreach ( var ws in worksets )
                 {
                     var shouldClose = closeWorksetMark
                         .Any(m => ws.Name.IndexOf(m, StringComparison.OrdinalIgnoreCase) >= 0);

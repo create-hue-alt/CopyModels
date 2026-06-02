@@ -13,12 +13,11 @@ namespace CopyModels.Core.Models
     public class ProjectSettings
     {
         // Идентификация
-        public string Discipline { get; }
         public string Project { get; }
         public string Name { get; }
 
         /// <summary>Отображение имя строки в UI списке </summary>
-        public string DisplayName { get; }
+        public string DisplayName { get; private set; }
 
         // Маппинг диска
         public string MapDrive { get; }    // например "P:"
@@ -78,26 +77,28 @@ namespace CopyModels.Core.Models
         //
         // Конструктор
         //
-        public ProjectSettings(string discipline,
-                                string project,
-                                string name,
-                                JObject settings)
+        public ProjectSettings(string project, string name, JToken settings)
         {
             if (settings == null)
                 throw new ArgumentNullException(nameof(settings));
 
-            Discipline = discipline;
+            
             Project = project;
             Name = name;
-
+            
             var now = DateTime.Now;
+            
+            //DisplayName = settings["Purge"]?.Value<bool>() == true ? $"{Name} + purge" : Name;
+
+
 
             // Маппинг диска
+            
             MapDrive = settings["Map Drive"]?.Value<string>();
             DrivePath = ReplacePlaceholders( settings["Drive Path"]?.Value<string>(), 
                                              project,
                                              now);
-
+                        
             // Источник
             SourcePath = ReplacePlaceholders(settings["Source Path"]?.Value<string>(),
                                              project,
@@ -114,13 +115,14 @@ namespace CopyModels.Core.Models
                                                         now));
                 }
             }
-
+            
             // Имя для UI
             var nameExtension = TargetPaths
                                 .Select(t => Path.GetExtension(t).ToUpper())
                                 .Distinct()
                                 .ToList();
-            DisplayName = $"{discipline,-20} | {project, -35} | {name, -35}";
+            DisplayName = $"{project, -15} | {name, -35}";
+
             if (SourcePath != null)
             {
                 DisplayName += " | " + Path.GetExtension(SourcePath).ToUpper();

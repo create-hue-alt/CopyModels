@@ -40,9 +40,11 @@ namespace CopyModels.Plugin
             var revitVersion = app.VersionNumber;
 
             // Логирование
-            var logPath = Path.Combine(@"C:\Log",
-                $"CopyModels_{DateTime.Now:yyyyMMdd_HHmmss}.log");
-            Directory.CreateDirectory(Path.GetDirectoryName(logPath));
+            var logDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                "000_CopyModels");
+            Directory.CreateDirectory(logDir);
+            var logPath = Path.Combine(logDir, $"CopyModels_{DateTime.Now: yyyyMMdd_HHmmss}.log");
             var logWriter = new StreamWriter(logPath, append: false, System.Text.Encoding.UTF8);
 
             Action<string> logInfo = m => WriteLog(logWriter, "INFO", m);
@@ -73,42 +75,51 @@ namespace CopyModels.Plugin
             // Путь к JSON конфигам
             var documentPath = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                "CopyModels");
+                "000_CopyModels");
 
+            // Читаем единый конфигурационный файл
             var settingsReader = new SettingsReader(documentPath);
+            var settings = settingsReader.ReadAll();
 
-            // Выбор дисциплины
-            var disciplines = settingsReader.GetDisciplineNames().ToList();
-            disciplines.Add("!BIM!");
+            logInfo($"Found {settings.Count} projects groups");
 
-            var selectedDiscipline = ShowSelectionDialog(
-                disciplines,
-                "Select Discipline",
-                multiselect: false)
-                ?.FirstOrDefault();
-            if (selectedDiscipline == null) { logWriter.Dispose(); return Result.Cancelled; }
+            // Защитная проверка: если в "ALL" ничего нет, значит конфиг пуст или не прочитался
+            if (!settings.ContainsKey("ALL") || settings["ALL"].Count == 0)
+            {
+                logInfo("No tasks found in configuration files.");
+                logWriter.Dispose();
+                return Result.Failed;
+            }
 
-            logInfo($"Discipline: {selectedDiscipline}");
+            // Собираем список номеров проектов (без группы "ALL", ее добавим наверх)
+            var projects = settings.Keys.Where(k => k != "ALL").OrderBy(k => k).ToList();
+            projects.Insert(0, "ALL");
 
-            // Чтение настроек
-            var settings = selectedDiscipline == "BIM"
-                ? settingsReader.ReadAll()
-                : settingsReader.ReadDiscipline(selectedDiscipline);
+            // Показываем диалог выбора проекта
+            var selectedProject = ShowSelectionDialog(
+                                    projects,
+                                    "Select Project",
+                                    multiselect: false)?.FirstOrDefault();
 
-            // Выбор заданий
-            var allSettings = settings.ContainsKey("ALL")
-                ? settings["ALL"]
-                : new List<ProjectSettings>();
+            if (selectedProject == null) { logWriter.Dispose(); return Result.Cancelled; }
+
+            logInfo($"Selected project/group: {selectedProject}");
+
+            // Берем список задач для выбранного проекта (или "ALL", если выбрали все)
+            var projectSettings = settings[selectedProject];
+
+            // Показываем диалог выбора конкретных задач
             var selectedTasks = ShowSelectionDialog(
-                allSettings.Select(s => s.DisplayName).ToList(),
-                selectedDiscipline,
+                projectSettings.Select(s => s.DisplayName).ToList(),
+                $"Tasks for {selectedProject}",
                 multiselect: true);
 
             if (selectedTasks == null || selectedTasks.Count == 0)
             { logWriter.Dispose(); return Result.Cancelled; }
 
-            var tasksRun = allSettings
-                .Where(s => selectedTasks.Contains(s.DisplayName))
+            // Формируем плоский список задач для запуска.
+            var tasksRun = projectSettings.
+                Where(s => selectedTasks.Contains(s.DisplayName))
                 .ToList();
 
             // Выполнение заданий
@@ -116,7 +127,10 @@ namespace CopyModels.Plugin
             try
             {
                 foreach (var task in tasksRun)
+                {
+                    logInfo($"Starting task: {task.DisplayName}");
                     RunTask(task, logInfo, logWarning, logError);
+                }
             }
             finally
             {
@@ -430,13 +444,13 @@ namespace CopyModels.Plugin
             string action,
             string from,
             string to) =>
-        _resultTable[task.DisplayName].Add(new[] {model, action, $"From: {from}\nTo: {to}" });
+        _resultTable[task.DisplayName].Add(new[] { model, action, $"From: {from}\nTo: {to}" });
 
         private void ShowResultReport()
         {
             // В будущем - WPF окно. Пока - TaskDialog с кратким итогом.
             var sb = new System.Text.StringBuilder();
-            foreach (var kv  in _resultTable)
+            foreach (var kv in _resultTable)
             {
                 sb.AppendLine($"=== {kv.Key}: ({kv.Value.Count} models) ===");
                 foreach (var row in kv.Value)
@@ -491,13 +505,13 @@ namespace CopyModels.Plugin
                 var result = dlg.Show();
                 var idx = (int)result - 1000;
                 return idx >= 0 && idx < items.Count
-                    ? new List<string> { items[idx] } 
+                    ? new List<string> { items[idx] }
                     : null;
             }
 
             // Multiselect: временно возвращает все
             // (пототм будет WPF окно с чекбоксами)
-            
+
             return items;
         }
 
@@ -519,7 +533,7 @@ namespace CopyModels.Plugin
                 return Uri.UnescapeDataString(
                     uri.MakeRelativeUri(target)
                     .ToString()
-                    .Replace('/','\\'));
+                    .Replace('/', '\\'));
             }
         }
 
