@@ -468,24 +468,7 @@ namespace CopyModels.Plugin
         {
             // TODO: заменить на WPF - диалог (CopyModels.UI).
             // Временный вариант через TaskDialog (только для одиночного выбора).
-
-            /*
-            if (!multiselect && items.Count <= 5)
-            {
-                var dlg = new TaskDialog(title);
-                for (int i = 0; i < Math.Min(items.Count, 4); i++)
-                    dlg.AddCommandLink((TaskDialogCommandLinkId)(1000 + i), items[i]);
-                var res = dlg.Show();
-                var idx = (int)res - 1000;
-                return idx >= 0 && idx < items.Count
-                    ? new List<string>() { items[idx] }
-                    : null;
-            }
-
-            // Для рефльного использования здесь будет Windows из CopyModels.UI
-            return items; // заглушка - вернгуть все 
-            */
-
+            
             // Одиночный выбор через TaskDualog
             if (!multiselect)
             {

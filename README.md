@@ -24,7 +24,7 @@
 
 ### C# версия — в разработке
 
-**Этап 1 — рабочий плагин (в процессе)**
+**Этап 1 — рабочий плагин (завершен ✅)**
 - [x] `ProjectSettings.cs` ✅
 - [x] `ModelSetting.cs` ✅
 - [x] `SettingsReader.cs` ✅
@@ -32,9 +32,9 @@
 - [x] `RevitServerService.cs` ✅
 - [x] `ModelService.cs` ✅
 - [x] `EventService.cs` ✅
-- [ ] `CopyModelsCommand.cs` ⏳ — точка входа, сессия 10
+- [x] `CopyModelsCommand.cs` ✅ — точка входа, отлажена
 
-**Этап 2+3 — UI + новый JSON формат (параллельно)**
+**Этап 2+3 — WPF UI + новый JSON формат (в разработке ⏳)**
 - [ ] WPF визард создания конфига
 - [ ] `UserConfig` класс — UI-генерируемый JSON
 - [ ] Сохранение в `C:\Users\%User%\Documents\CopyModels\`
