@@ -77,8 +77,8 @@ CopyModels.sln
 - [x] `ModelService.cs`
 - [x] `EventService.cs`
 
-### Plugin ⏳
-- [ ] `CopyModelsCommand.cs` ← ТЕКУЩИЙ ШАГ
+### Plugin ✅
+- [x] `CopyModelsCommand.cs` ✅ готов и отлажен (сессия 10)
 
 ### UI + новый JSON (Этап 2+3) ⏳
 - [ ] `UserConfig` класс — структура UI-генерируемого JSON
@@ -225,6 +225,63 @@ public Result Execute(ExternalCommandData commandData, ...)
     return Result.Succeeded;
 }
 ```
+
+### Сессия 11 — Отладка CopyModelsCommand.cs и переход на WPF UI (02.06.2026)
+
+**Успешная отладка плагина!** ✅
+
+#### Проблемы и решения
+
+1. **Проблема:** Лог показывал "Found 1 projects groups" и "No tasks found"
+   - **Причина:** `SettingsReader` ищет JSON в `C:\Users\{User}\Documents\CopyModels\`, а конфиг лежал в `C:\Users\GUV\Documents\000_CopyModels\`
+   - **Решение:** Обновили путь в `CopyModelsCommand.cs` строка 76-78
+
+2. **Проблема:** "Close error: The file is read-only, can not be saved"
+   - **Причина:** После `Transmit` файл становится read-only, `Close(true)` пытается сохранить
+   - **Решение:** Изменили `doc.Close(false)` в `ModelService.RelinquishAndClose()`
+
+3. **Проблема:** "Export failed: file not created at Temp"
+   - **Причина:** Неточность в JSON конфиге (путь с двойными слэшами)
+   - **Решение:** Исправили JSON формат
+
+#### Текущий статус Этап 1 ✅
+
+- ✅ JSON конфиги читаются корректно
+- ✅ Выбор проектов работает (TaskDialog)
+- ✅ Выбор задач работает (заглушка возвращает все)
+- ✅ Выбор моделей работает (SelectFromList с группировкой)
+- ✅ Открытие моделей с detach режимом
+- ✅ Закрытие worksets по маске
+- ✅ Экспорт в NWC с правильными параметрами
+- ✅ Archiving существующих файлов
+- ✅ Закрытие документов без ошибок
+- ✅ Обработка Revit диалогов (EventService)
+
+**Пример успешного лога:**
+```
+[INFO] Found 2 projects groups
+[INFO] Selected project/group: 000700
+[INFO] Found 1 models in P:\MOS-TLP\GROUPS\ALLGEMEIN\06_HKLS\GUV\00_CopyModels_Test
+[INFO] Processing: CopyModelsDebug
+[INFO] Opening (detach): P:\...\CopyModelsDebug.rvt
+[INFO] Exporting to: C:\Users\GUV\Documents\000_CopyModels\CopyModelsDebug.nwc
+[INFO] Export saved: C:\Users\GUV\Documents\000_CopyModels\CopyModelsDebug.nwc
+[INFO] Saved: C:\Users\GUV\Documents\000_CopyModels\CopyModelsDebug.nwc
+[INFO] Relinquish done.
+[INFO] Document closed
+```
+
+#### Следующий шаг: Этап 2 — WPF UI
+
+**Текущие проблемы UI (TaskDialog):**
+- Максимум 10 кнопок — плохо для множественного выбора
+- Нет чекбоксов для выбора нескольких элементов
+- Жёсткая логика, сложно добавить новые возможности
+
+**Решение: создать простое WPF окно вместо TaskDialog**
+- Две базовые формы: SelectionWindow для проектов и задач
+- Чекбоксы для множественного выбора
+- Переиспользуемая логика для будущих окон
 
 ---
 

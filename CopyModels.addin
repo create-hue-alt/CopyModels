@@ -9,6 +9,6 @@
 		<VendorDescription>ATP TLP BIM Tools</VendorDescription>
 		<Text>Copy Models</Text>
 		<Description>Batch copy and export Revit models (RVT, NWC, IFC)</Description>
-		<VisibilityMode>NotVisibleWhenNoActiveDocument</VisibilityMode>
+		<VisibilityMode>AlwaysVisible</VisibilityMode>
 	</AddIn>
 </RevitAddIns>

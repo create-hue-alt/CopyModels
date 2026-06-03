@@ -23,13 +23,13 @@ CopyModels.sln
 │   └── Settings/
 │       └── SettingsReader.cs      ✅ готов + протестирован
 │
-├── CopyModels.Plugin              — требует RevitAPI.dll ✅✅✅✅
+├── CopyModels.Plugin              — требует RevitAPI.dll ✅✅✅✅✅
 │   ├── Services/
 │   │   ├── FileService.cs         ✅ готов (сессия 5)
 │   │   ├── RevitServerService.cs  ✅ готов (сессия 6-7)
 │   │   ├── ModelService.cs        ✅ готов (сессия 8)
 │   │   ├── EventService.cs        ✅ готов (сессия 9)
-│   │   └── CopyModelsCommand.cs   ⏳ следующий (сессия 10)
+│   │   └── CopyModelsCommand.cs   ✅ готов и отлажен (сессия 10-11)
 │
 ├── CopyModels.ConsoleTest         — тестирование ✅
 │   ├── Program.cs

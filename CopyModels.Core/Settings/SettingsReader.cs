@@ -8,8 +8,7 @@ using System.Linq;
 namespace CopyModels.Settings
 {
     /// <summary>
-    /// Читает JSON-конфиги дисциплин и возвращает список ProjectSettings.
-    /// Аналог функции read_setting_file() и get_config() из Python.
+    /// Читает единый конфигурационный файл CopyModels.json и возвращает структуру настроек.
     /// </summary>
     public class SettingsReader
     {
@@ -28,37 +27,24 @@ namespace CopyModels.Settings
         //
         // Публичный API
         //
-
-        /// <summary>Возвращает список имен дисциплин (имена .json файлов без расширения) </summary>
-        public IReadOnlyList<string> GetDisciplineNames()
-        {
-            if(!Directory.Exists(_settingsFolder))
-                return Array.Empty<string>();
-
-            return Directory.GetFiles(_settingsFolder, "*.json")
-                .Select(f => Path.GetFileNameWithoutExtension(f))
-                .OrderBy(n => n)
-                .ToList();
-        }
-
+                
         /// <summary>
-        /// Читает настройки одной дисциплины.
-        /// </summary>
-        /// <returns>
-        ///  Словарь: ключ - название проекта.
-        /// </returns>
-        public Dictionary<string, List<ProjectSettings>> ReadDiscipline(string disciplineName)
-        {
-            var file = Path.Combine(_settingsFolder, $"{disciplineName}.json");
-            return ReadFiles(new[] { file });
-        }
-
-        /// <summary>
-        /// Читает настройки всех дисциплин.
+        /// Читает все .json файлы в папке и возвращает словаррь настроек.
+        /// Ключ словаря - номер проекта.
         /// </summary>
         public Dictionary<string, List<ProjectSettings>> ReadAll()
         {
-            var files = Directory.GetFiles(_settingsFolder, $"*.json").ToArray();
+
+            var result = new Dictionary<string, List<ProjectSettings>>()
+            {
+                ["ALL"] = new List<ProjectSettings>()
+            };
+
+            if (!Directory.Exists(_settingsFolder)) return result;
+
+            // Забираем все json файлы из папки 
+            var files  = Directory.GetFiles(_settingsFolder,"*.json");
+            
             return ReadFiles(files);
         }
 
@@ -71,40 +57,39 @@ namespace CopyModels.Settings
             var result = new Dictionary<string, List<ProjectSettings>>()
             {
                 ["ALL"] = new List<ProjectSettings>()
-            };
+            };         
 
-            for (int i = 0; i < files.Length; i++)
+            foreach ( var file in files)
             {
-                var file = files[i];
-                var discipline = Path.GetFileNameWithoutExtension(file);
-
-                if(!File.Exists(file))
-                    continue;
-
                 var json = File.ReadAllText(file, System.Text.Encoding.UTF8);
                 var root = JObject.Parse(json);
 
+                // Уровень 1: Проект
                 foreach (var projectProp in root.Properties())
                 {
                     var project = projectProp.Name;
-                    var taskDict = (JObject)projectProp.Value;
+                    var taskDict = projectProp.Value as JObject;
 
-                    if(!result.ContainsKey(project))
+                    if (taskDict == null) continue;
+
+                    if (!result.ContainsKey(project))
                         result[project] = new List<ProjectSettings>();
 
+                    // Уровень 2: Задача ("From RVT FS to NWC FS")
                     foreach (var taskProp in taskDict.Properties())
                     {
                         var taskName = taskProp.Name;
-                        var taskSettings = (JObject)taskProp.Value;
+                        var taskSettings = taskProp.Value;
 
-                        var ps = new ProjectSettings(discipline, project, taskName, taskSettings);
+                        var ps = new ProjectSettings(project, taskName, taskSettings);
+
                         result[project].Add(ps);
                         result["ALL"].Add(ps);
                     }
                 }
             }
 
-            // Сортируем каждую группу по DicplayName
+            // Сортируем каждую группу по DisplayName
             foreach (var key in result.Keys.ToList())
                 result[key] = result[key].OrderBy(ps => ps.DisplayName).ToList();
 
