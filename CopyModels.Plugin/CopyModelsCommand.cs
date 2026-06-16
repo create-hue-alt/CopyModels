@@ -92,8 +92,12 @@ namespace CopyModels.Plugin
             }
 
             // Собираем список номеров проектов (без группы "ALL", ее добавим наверх)
-            var projects = settings.Keys.Where(k => k != "ALL").OrderBy(k => k).ToList();
-            projects.Insert(0, "ALL");
+            var projects = settings
+                            .Keys
+                            .Where(k => k != "ALL")
+                            .OrderBy(k => k)
+                            .ToList();
+            //projects.Insert(0, "ALL");
 
             // Показываем диалог выбора проекта
             var selectedProject = ShowSelectionDialog(
