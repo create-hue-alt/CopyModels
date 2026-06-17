@@ -1,4 +1,6 @@
-﻿using System;
+﻿using CopyModels.Core.Models;
+using CopyModels.UI.ViewModels;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -19,9 +21,19 @@ namespace CopyModels.UI.Windows
     /// </summary>
     public partial class SelectionWindow : Window
     {
+        private SelectionViewModel _vm;
         public SelectionWindow()
         {
             InitializeComponent();
+            _vm = new SelectionViewModel();
+            DataContext = _vm;
+        }
+
+        private void TaskList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            _vm.SelectedSettings.Clear();
+            foreach (ProjectSettings item in TaskList.SelectedItems)
+                _vm.SelectedSettings.Add(item);
         }
     }
 }

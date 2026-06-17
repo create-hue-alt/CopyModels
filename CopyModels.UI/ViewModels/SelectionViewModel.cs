@@ -21,7 +21,7 @@ namespace CopyModels.UI.ViewModels
     /// 3. Проверяем {REQUEST} пути (пользователь указывает в ручную)
     /// 4. Возвращаем выбранные ProjectSettings для обработки
     /// </summary>
-    internal class SelectionViewModel : INotifyPropertyChanged
+    public class SelectionViewModel : INotifyPropertyChanged
     {
         // ======= СВОЙСТВА ДЛЯ UI =======
 
