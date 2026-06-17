@@ -67,7 +67,7 @@ CopyModels.sln
 │   │   ├── RevitServerService.cs         ✅
 │   │   ├── ModelService.cs               ✅
 │   │   └── EventService.cs               ✅
-│   └── CopyModelsCommand.cs              ⏳
+│   └── CopyModelsCommand.cs              ✅
 │
 ├── CopyModels.ConsoleTest    — тестирование Core (без Revit) ✅
 │   ├── Program.cs
@@ -77,27 +77,27 @@ CopyModels.sln
 └── CopyModels.UI             — WPF интерфейс (этап 2+3) ⏳
 ```
 
-## Как работает оригинальный Python плагин
+## Структура JSON конфига
 
-### Трёхуровневый выбор
+Файл `*.json` в папке `C:\Users\%UserName%\Documents\000_CopyModels\`.  
+Структура: **Проект → Задача** (без разбиения по дисциплинам).
 
+```json
+"000700": {
+  "From RVT FS to NWC FS": {
+    "Source Path": "P:\\...\\*.rvt",
+    "Target Path": ["C:\\...\\{PN}.nwc"],
+    "Purge": false,
+    "Keep Structure": true
+  }
+}
 ```
-1. Выбор дисциплины = выбор JSON файла конфига
-   (сохраняется между запусками, Shift+Click для смены)
-        ↓
-2. Выбор заданий из JSON (multiselect, группировка по проекту)
-        ↓
-3. Для каждого задания — выбор моделей (по умолчанию "Not Actual")
-        ↓
-4. Обработка каждой модели
-```
 
-### Три ветки логики обработки
-
+## Логика обработки модели
 ```
-is_exceed → удалить/архивировать (модель исчезла из Source)
+is_exceed → удалить/архивировать
 purge OR is_open_required → открыть Revit → обработать → закрыть
-иначе → простое копирование файла
+иначе → простое копирование
 ```
 
 ## Стратегия JSON конфигов

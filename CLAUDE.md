@@ -16,23 +16,33 @@ CopyModels.sln
 
 Правило: "Скомпилируется без RevitAPI.dll?" → Core, иначе → Plugin
 
-## Текущий статус
+## Структура JSON конфига
 
-| Этап | Статус |
-|------|--------|
-| 1 — Plugin + CopyModelsCommand.cs | ✅ Готов |
-| 2+3 — WPF UI + новый JSON формат | ⏳ В работе (структура создана, ViewModels пустые) |
-| 4 — Планировщик | ⏸ Позже |
-| 5 — PostgreSQL | ⏸ Позже |
+Один файл `*.json` в папке `Documents\000_CopyModels\`.
+Двухуровневая структура: **Проект → Задача** (дисциплин нет).
 
-CopyModels.UI сейчас: RelayCommand, SelectionViewModel, ExportOptionsViewModel, ProgressViewModel — все созданы но пустые. XAML окна — пустые Grid.
+```json
+"000700": {
+  "From RVT FS to NWC FS": {
+    "Source Path": "...",
+    "Target Path": ["..."]
+  }
+}
+```
 
-## Ключевые решения
-- JSON — единственный источник правды. UI будет генерировать JSON в `Documents\CopyModels\config.json`
-- Этапы 2 и 3 делаем параллельно (UI создаёт JSON, Command его читает)
-- Старый формат конфигов (на сервере) читается без изменений
+Текущий статус
+Этап	Статус
+1 — Plugin + CopyModelsCommand.cs	✅ Готов
+2+3 — WPF UI + JSON формат	⏳ В работе
+4 — Планировщик	⏸ Позже
+5 — PostgreSQL	⏸ Позже
+CopyModels.UI: RelayCommand ✅, ViewModels созданы но пустые, XAML окна пустые.
 
-## Зависимости
-- .NET Framework 4.8
-- Newtonsoft.Json (NuGet)
-- RevitAPI.dll / RevitAPIUI.dll (только Plugin)
+Ключевые решения
+Концепция "дисциплин" удалена. Разделение: Проект → Задача.
+JSON — единственный источник правды. UI будет генерировать JSON.
+Этапы 2 и 3 параллельно: UI создаёт JSON, Command читает его.
+Зависимости
+.NET Framework 4.8
+Newtonsoft.Json (NuGet)
+RevitAPI.dll / RevitAPIUI.dll (только Plugin)
