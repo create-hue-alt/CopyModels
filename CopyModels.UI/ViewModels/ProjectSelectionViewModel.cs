@@ -2,13 +2,9 @@
 using CopyModels.Settings;
 using CopyModels.UI.Commands;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CopyModels.UI.ViewModels
 {
@@ -21,7 +17,7 @@ namespace CopyModels.UI.ViewModels
     /// 3. Проверяем {REQUEST} пути (пользователь указывает в ручную)
     /// 4. Возвращаем выбранные ProjectSettings для обработки
     /// </summary>
-    public class SelectionViewModel : INotifyPropertyChanged
+    public class ProjectSelectionViewModel : INotifyPropertyChanged
     {
         // ======= СВОЙСТВА ДЛЯ UI =======
 
@@ -33,12 +29,12 @@ namespace CopyModels.UI.ViewModels
             set { _allSettings = value; OnPropertyChanged(); }
         }
 
-        // Выбранные пользователем задания
-        private ObservableCollection<ProjectSettings> _selectedSettings;
-        public ObservableCollection<ProjectSettings> SelectedSettings
+        // Выбранный пользователем проект
+        private ProjectSettings _selectedProject;
+        public ProjectSettings SelectedProject
         {
-            get => _selectedSettings;
-            set { _selectedSettings = value; OnPropertyChanged(); }
+            get => _selectedProject;
+            set { _selectedProject = value; OnPropertyChanged(); }
         }
 
         // Статус загрузки
@@ -54,14 +50,13 @@ namespace CopyModels.UI.ViewModels
         public RelayCommand CancelCommand { get; }
 
         // ======= СВОЙСТВА ОКНА =======
-        private Action<ObservableCollection<ProjectSettings>> _onOkCallback;
+        private Action<ProjectSettings> _onOkCallback;
         private Action _onCancelCallback;
 
         // ======= КОНСТРУКТОР =======
-        public SelectionViewModel()
+        public ProjectSelectionViewModel()
         {
             AllSettings = new ObservableCollection<ProjectSettings>();
-            SelectedSettings = new ObservableCollection<ProjectSettings>();
 
             OkCommand = new RelayCommand(ExecuteOk, CanExecuteOk);
             CancelCommand = new RelayCommand(ExecuteCancel);
@@ -95,7 +90,7 @@ namespace CopyModels.UI.ViewModels
         /// Устанавливает callbacks для OK и Cancel.
         /// Когда пользователь нажмет кнопку, вызовеся соответсвующий callback.
         /// </summary>
-        public void SetCallbacks(Action<ObservableCollection<ProjectSettings>> onOk, Action onCancel)
+        public void SetCallbacks(Action<ProjectSettings> onOk, Action onCancel)
         {
             _onOkCallback = onOk;
             _onCancelCallback = onCancel;
@@ -106,14 +101,14 @@ namespace CopyModels.UI.ViewModels
         /// <summary>
         /// CanExecute для OK кнопки - включаем только если что-то выбрано. 
         /// </summary>
-        private bool CanExecuteOk() => SelectedSettings.Count > 0;       
+        private bool CanExecuteOk() => SelectedProject != null;       
         
         /// <summary>
         /// Execute для OK кнопки.
         /// </summary>
         private void ExecuteOk()
         {
-            if (SelectedSettings.Count == 0)
+            if (SelectedProject == null)
             {
                 StatusMessage = "No settings selected";
                 return;
@@ -122,7 +117,7 @@ namespace CopyModels.UI.ViewModels
             StatusMessage = "Processing selected settings...";
 
             // Вызываем callback в CopyModelsCommand.cs
-            _onOkCallback?.Invoke(SelectedSettings);
+            _onOkCallback?.Invoke(SelectedProject);
         }
 
         /// <summary>

@@ -17,23 +17,18 @@ using System.Windows.Shapes;
 namespace CopyModels.UI.Windows
 {
     /// <summary>
-    /// Interaction logic for SelectionWindow.xaml
+    /// Interaction logic for ProjectSelectionWindow.xaml
     /// </summary>
-    public partial class SelectionWindow : Window
+    public partial class ProjectSelectionWindow : Window
     {
-        private SelectionViewModel _vm;
-        public SelectionWindow()
+        private ProjectSelectionViewModel _vm;
+        public ProjectSelectionWindow()
         {
             InitializeComponent();
-            _vm = new SelectionViewModel();
+            _vm = new ProjectSelectionViewModel();
             DataContext = _vm;
-        }
+        }      
 
-        private void TaskList_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            _vm.SelectedSettings.Clear();
-            foreach (ProjectSettings item in TaskList.SelectedItems)
-                _vm.SelectedSettings.Add(item);
-        }
+        public ProjectSelectionViewModel ViewModel => _vm;
     }
 }

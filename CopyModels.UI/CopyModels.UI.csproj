@@ -57,8 +57,9 @@
     </ApplicationDefinition>
     <Compile Include="Commands\RelayCommand.cs" />
     <Compile Include="ViewModels\ExportOptionsViewModel.cs" />
+    <Compile Include="ViewModels\ModelSelectionItem.cs" />
     <Compile Include="ViewModels\ProgressViewModel.cs" />
-    <Compile Include="ViewModels\SelectionViewModel.cs" />
+    <Compile Include="ViewModels\ProjectSelectionViewModel.cs" />
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
@@ -69,8 +70,8 @@
     <Compile Include="Windows\ProgressWindow.xaml.cs">
       <DependentUpon>ProgressWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Windows\SelectionWindow.xaml.cs">
-      <DependentUpon>SelectionWindow.xaml</DependentUpon>
+    <Compile Include="Windows\ProjectSelectionWindow.xaml.cs">
+      <DependentUpon>ProjectSelectionWindow.xaml</DependentUpon>
     </Compile>
   </ItemGroup>
   <ItemGroup>
@@ -111,7 +112,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Windows\SelectionWindow.xaml">
+    <Page Include="Windows\ProjectSelectionWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

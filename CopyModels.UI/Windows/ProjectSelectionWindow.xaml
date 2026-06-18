@@ -1,5 +1,5 @@
 ﻿<Window
-    x:Class="CopyModels.UI.Windows.SelectionWindow"
+    x:Class="CopyModels.UI.Windows.ProjectSelectionWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -8,7 +8,7 @@
     Title="Выбор заданий"
     Width="860"
     Height="520"
-    d:DataContext="{d:DesignInstance Type=vm:SelectionViewModel}"
+    d:DataContext="{d:DesignInstance Type=vm:ProjectSelectionViewModel}"
     WindowStartupLocation="CenterScreen"
     mc:Ignorable="d">
     <Grid>
@@ -23,8 +23,8 @@
             DisplayMemberPath="DisplayName"
             FontFamily="Consolas"
             ItemsSource="{Binding AllSettings}"
-            SelectionChanged="TaskList_SelectionChanged"
-            SelectionMode="Extended" />
+            SelectedItem="{Binding SelectedProject}"
+            SelectionMode="Single" />
         <StackPanel
             Grid.Row="1"
             HorizontalAlignment="Right"

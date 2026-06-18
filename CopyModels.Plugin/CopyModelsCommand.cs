@@ -4,6 +4,7 @@ using Autodesk.Revit.UI;
 using CopyModels.Core.Models;
 using CopyModels.Plugin.Services;
 using CopyModels.Settings;
+using CopyModels.UI.Windows;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -91,50 +92,27 @@ namespace CopyModels.Plugin
                 return Result.Failed;
             }
 
-            // Собираем список номеров проектов (без группы "ALL", ее добавим наверх)
-            var projects = settings
-                            .Keys
-                            .Where(k => k != "ALL")
-                            .OrderBy(k => k)
-                            .ToList();
-            //projects.Insert(0, "ALL");
+            // Показываем окно выбора заданий; selectedProject заполняется через callback onOk
+            ProjectSettings selectedProject = null;
 
-            // Показываем диалог выбора проекта
-            var selectedProject = ShowSelectionDialog(
-                                    projects,
-                                    "Select Project",
-                                    multiselect: false)?.FirstOrDefault();
+            var window = new ProjectSelectionWindow();
+            window.ViewModel.LoadSettings(documentPath);
+            window.ViewModel.SetCallbacks(
+                onOk: selected => { selectedProject = selected; window.Close(); },
+                onCancel: () => window.Close()
+                );
 
-            if (selectedProject == null) { logWriter.Dispose(); return Result.Cancelled; }
+            window.ShowDialog();
 
-            logInfo($"Selected project/group: {selectedProject}");
-
-            // Берем список задач для выбранного проекта (или "ALL", если выбрали все)
-            var projectSettings = settings[selectedProject];
-
-            // Показываем диалог выбора конкретных задач
-            var selectedTasks = ShowSelectionDialog(
-                projectSettings.Select(s => s.DisplayName).ToList(),
-                $"Tasks for {selectedProject}",
-                multiselect: true);
-
-            if (selectedTasks == null || selectedTasks.Count == 0)
+            if (selectedProject == null)
             { logWriter.Dispose(); return Result.Cancelled; }
-
-            // Формируем плоский список задач для запуска.
-            var tasksRun = projectSettings.
-                Where(s => selectedTasks.Contains(s.DisplayName))
-                .ToList();
 
             // Выполнение заданий
             _eventService.Subscribe();
             try
             {
-                foreach (var task in tasksRun)
-                {
-                    logInfo($"Starting task: {task.DisplayName}");
-                    RunTask(task, logInfo, logWarning, logError);
-                }
+                logInfo($"Starting task: {selectedProject.DisplayName}");
+                RunTask(selectedProject, logInfo, logWarning, logError);
             }
             finally
             {
@@ -463,43 +441,6 @@ namespace CopyModels.Plugin
             TaskDialog.Show("CopyModels - Report", sb.Length > 0
                                                         ? sb.ToString()
                                                         : "No operation performed.");
-        }
-
-        private static List<string> ShowSelectionDialog(
-            List<string> items,
-            string title,
-            bool multiselect)
-        {
-            // TODO: заменить на WPF - диалог (CopyModels.UI).
-            // Временный вариант через TaskDialog (только для одиночного выбора).
-            
-            // Одиночный выбор через TaskDualog
-            if (!multiselect)
-            {
-                if (items.Count == 0) return null;
-                if (items.Count == 1) return new List<string> { items[0] };
-
-                var dlg = new TaskDialog(title);
-                dlg.MainInstruction = $"Select one from {items.Count} items";
-
-                for (int i = 0; i < Math.Min(items.Count, 10); i++)
-                {
-                    dlg.AddCommandLink(
-                        (TaskDialogCommandLinkId)(1000 + i),
-                        items[i]);
-                }
-
-                var result = dlg.Show();
-                var idx = (int)result - 1000;
-                return idx >= 0 && idx < items.Count
-                    ? new List<string> { items[idx] }
-                    : null;
-            }
-
-            // Multiselect: временно возвращает все
-            // (пототм будет WPF окно с чекбоксами)
-
-            return items;
         }
 
         private static void WriteLog(StreamWriter writer, string level, string message)
