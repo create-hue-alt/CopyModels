@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CopyModels.UI.ViewModels;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -15,13 +16,18 @@ using System.Windows.Shapes;
 namespace CopyModels.UI.Windows
 {
     /// <summary>
-    /// Interaction logic for ExportOptionsWindow.xaml
+    /// Interaction logic for ModelSelectionWindow.xaml
     /// </summary>
-    public partial class ExportOptionsWindow : Window
+    public partial class ModelSelectionWindow : Window
     {
-        public ExportOptionsWindow()
+        private ModelSelectionViewModel _vm;
+        public ModelSelectionWindow()
         {
             InitializeComponent();
+            _vm = new ModelSelectionViewModel();
+            DataContext = _vm;
         }
+
+        public ModelSelectionViewModel ViewModel => _vm;
     }
 }

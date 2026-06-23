@@ -5,7 +5,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:vm="clr-namespace:CopyModels.UI.ViewModels"
-    Title="Выбор заданий"
+    Title="Выбор проектов"
     Width="860"
     Height="520"
     d:DataContext="{d:DesignInstance Type=vm:ProjectSelectionViewModel}"

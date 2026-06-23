@@ -58,14 +58,15 @@
     <Compile Include="Commands\RelayCommand.cs" />
     <Compile Include="ViewModels\ExportOptionsViewModel.cs" />
     <Compile Include="ViewModels\ModelSelectionItem.cs" />
+    <Compile Include="ViewModels\ModelSelectionViewModel.cs" />
     <Compile Include="ViewModels\ProgressViewModel.cs" />
     <Compile Include="ViewModels\ProjectSelectionViewModel.cs" />
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Windows\ExportOptionsWindow.xaml.cs">
-      <DependentUpon>ExportOptionsWindow.xaml</DependentUpon>
+    <Compile Include="Windows\ModelSelectionWindow.xaml.cs">
+      <DependentUpon>ModelSelectionWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="Windows\ProgressWindow.xaml.cs">
       <DependentUpon>ProgressWindow.xaml</DependentUpon>
@@ -104,7 +105,7 @@
     <Folder Include="Resources\" />
   </ItemGroup>
   <ItemGroup>
-    <Page Include="Windows\ExportOptionsWindow.xaml">
+    <Page Include="Windows\ModelSelectionWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

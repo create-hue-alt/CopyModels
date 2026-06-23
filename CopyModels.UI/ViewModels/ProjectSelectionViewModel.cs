@@ -9,11 +9,11 @@ using System.Runtime.CompilerServices;
 namespace CopyModels.UI.ViewModels
 {
     /// <summary>
-    /// Первое окно выбора: выбор проекта и заданий из JSON конфига.
+    /// Первое окно выбора: выбор проекта JSON конфига.
     /// 
     /// Логика:
     /// 1. Загружаем все ProjectSettings из JSON
-    /// 2. Порльзователь выбирает несколько (multiselect)
+    /// 2. Порльзователь выбирает одно
     /// 3. Проверяем {REQUEST} пути (пользователь указывает в ручную)
     /// 4. Возвращаем выбранные ProjectSettings для обработки
     /// </summary>
@@ -132,9 +132,8 @@ namespace CopyModels.UI.ViewModels
 
         // ======= INotifyPropertyChanged =======
         public event PropertyChangedEventHandler PropertyChanged;
-        private void OnPropertyChanged([CallerMemberName] string propertyName = null)
-        {
+        private void OnPropertyChanged([CallerMemberName] string propertyName = null) =>        
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
+        
     }
 }

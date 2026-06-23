@@ -92,7 +92,7 @@ namespace CopyModels.Plugin
                 return Result.Failed;
             }
 
-            // Показываем окно выбора заданий; selectedProject заполняется через callback onOk
+            // Показываем окно выбора проекта; selectedProject заполняется через callback onOk
             ProjectSettings selectedProject = null;
 
             var window = new ProjectSelectionWindow();
@@ -107,12 +107,40 @@ namespace CopyModels.Plugin
             if (selectedProject == null)
             { logWriter.Dispose(); return Result.Cancelled; }
 
-            // Выполнение заданий
+            // Мапинг диска
+            if (selectedProject.MapDrive != null)
+                _fileService.MapDrive(selectedProject.MapDrive, selectedProject.DrivePath);
+
+            if (selectedProject.SourcePath == null)
+            { logWriter.Dispose(); return Result.Cancelled; }
+
+            // Строим список моделей выбранного проекта
+            var allModels = BuildModelSettings(selectedProject);
+            
+            if (allModels.Count == 0)
+            { logWriter.Dispose(); return Result.Cancelled; }
+
+            // Показываем окно выбора моделей
+            List<ModelSetting> selectedModels = null;
+
+            var modelWindow = new ModelSelectionWindow();
+            modelWindow.ViewModel.LoadModels(allModels);
+            modelWindow.ViewModel.SetCallbacks(
+                onOk: selected => { selectedModels = selected; modelWindow.Close(); },
+                onCancel: () => modelWindow.Close()
+                );
+
+            modelWindow.ShowDialog();
+
+            if (selectedModels == null || selectedModels.Count == 0)
+            { logWriter.Dispose( ); return Result.Cancelled; }
+
+            // Выполнение задания
             _eventService.Subscribe();
             try
             {
                 logInfo($"Starting task: {selectedProject.DisplayName}");
-                RunTask(selectedProject, logInfo, logWarning, logError);
+                RunTask(selectedProject,selectedModels , logInfo, logWarning, logError);
             }
             finally
             {
@@ -126,30 +154,21 @@ namespace CopyModels.Plugin
         }
 
         // 
-        // Выполнение одного задания
+        // Обработка выбранных моделей
         // 
 
         private void RunTask(
             ProjectSettings task,
+            List<ModelSetting> models,
             Action<string> logInfo,
             Action<string> logWarning,
             Action<string> logError)
         {
-            logInfo($"Task: {task.Project} - {task.DisplayName}");
+            logInfo($"Project: {task.Project} - {task.DisplayName}");
             _resultTable[task.DisplayName] = new List<string[]>();
 
             try
-            {
-                // Мапинг диска
-                if (task.MapDrive != null)
-                    _fileService.MapDrive(task.MapDrive, task.DrivePath);
-
-                if (task.SourcePath == null) return;
-
-                // Разрешаем {REQUEST} в путях (пропускаем в текущей версии - добавить UI при необходимости)
-                var models = BuildModelSettings(task);
-                if (models.Count == 0) return;
-
+            {               
                 foreach (var model in models)
                     ProcessModel(model, task, logInfo, logWarning, logError);
             }
