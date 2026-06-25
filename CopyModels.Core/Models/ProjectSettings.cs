@@ -74,6 +74,9 @@ namespace CopyModels.Core.Models
         // Замена имен
         public Dictionary<string, string> ReplaceName { get; }
 
+        // Сводка форматов конвертации для UI колонки (например "RVT > NWC + purge").
+        public string ExtensionSummary { get; private set; }
+
         //
         // Конструктор
         //
@@ -122,6 +125,10 @@ namespace CopyModels.Core.Models
                                 .Distinct()
                                 .ToList();
             DisplayName = $"{project, -15} | {name, -35}";
+
+            ExtensionSummary = SourcePath != null
+                ? $"{Path.GetExtension(SourcePath).ToUpper()} > {string.Join(" + ", nameExtension)}"
+                : "";
 
             if (SourcePath != null)
             {
@@ -182,7 +189,7 @@ namespace CopyModels.Core.Models
                             : null;
 
             if (Purge)
-                DisplayName += " + purge";                     
+            { DisplayName += " + purge"; ExtensionSummary += " + purge"; }
         }
 
         //

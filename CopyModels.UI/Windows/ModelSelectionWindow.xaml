@@ -9,6 +9,7 @@
     Title="Выбор моделей"
     Width="860"
     Height="520"
+    WindowStartupLocation="CenterScreen"
     d:DataContext="{d:DesignInstance Type=vm:ModelSelectionViewModel}"
     mc:Ignorable="d">
     <Grid>
@@ -25,17 +26,28 @@
             ItemsSource="{Binding Items}">
             <ListBox.ItemTemplate>
                 <DataTemplate>
-                    <StackPanel Orientation="Horizontal">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="32" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
                         <CheckBox
-                            Margin="8,0,0,0"
+                            Grid.Column="0"
                             VerticalAlignment="Center"
                             IsChecked="{Binding IsSelected}" />
-                        <TextBlock Text="{Binding DisplayName}" />
                         <TextBlock
+                            Grid.Column="1"
+                            VerticalAlignment="Center"
+                            Text="{Binding DisplayName}" />
+                        <TextBlock
+                            Grid.Column="2"
                             Margin="8,0,0,0"
+                            VerticalAlignment="Center"
                             Foreground="Red"
                             Text="{Binding Badges}" />
-                    </StackPanel>
+                    </Grid>
                 </DataTemplate>
             </ListBox.ItemTemplate>
         </ListBox>
