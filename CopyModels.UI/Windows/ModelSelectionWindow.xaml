@@ -9,8 +9,8 @@
     Title="Выбор моделей"
     Width="860"
     Height="520"
-    WindowStartupLocation="CenterScreen"
     d:DataContext="{d:DesignInstance Type=vm:ModelSelectionViewModel}"
+    WindowStartupLocation="CenterScreen"
     mc:Ignorable="d">
     <Grid>
         <Grid.RowDefinitions>
@@ -41,12 +41,24 @@
                             Grid.Column="1"
                             VerticalAlignment="Center"
                             Text="{Binding DisplayName}" />
-                        <TextBlock
-                            Grid.Column="2"
-                            Margin="8,0,0,0"
-                            VerticalAlignment="Center"
-                            Foreground="Red"
-                            Text="{Binding Badges}" />
+                        <ItemsControl Grid.Column="2" ItemsSource="{Binding Badges}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border
+                                        Margin="4,0,0,0"
+                                        Padding="6,1,6,1"
+                                        Background="{Binding Brush}"
+                                        CornerRadius="4">
+                                        <TextBlock Foreground="White" Text="{Binding Text}" />
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </Grid>
                 </DataTemplate>
             </ListBox.ItemTemplate>

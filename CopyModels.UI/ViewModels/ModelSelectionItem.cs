@@ -1,6 +1,9 @@
 ﻿using CopyModels.Core.Models;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Windows.Media;
 
 namespace CopyModels.UI.ViewModels
 {
@@ -17,8 +20,11 @@ namespace CopyModels.UI.ViewModels
 
         public string DisplayName => Model.DisplayName;
 
-        // Бейджи статусов - берем ключи из Model.StatusFlags
-        public string Badges => string.Join(", ", Model.StatusFlags.Keys);
+        public IEnumerable<BadgeItem> Badges =>
+            Model.StatusFlags.Count == 0
+            ? new[] { new BadgeItem("Actual", Brushes.Gray) }
+            : Model.StatusFlags.Keys.Select(key =>
+                new BadgeItem(key, key.EndsWith("_is_missed") ? Brushes.Red : Brushes.Orange));
 
         public ModelSelectionItem(ModelSetting model)
         {
