@@ -1,5 +1,10 @@
 # Прогресс разработки CopyModels
 
+> ⚠️ Архитектурное решение (сессия 12): концепция "дисциплин" удалена.  
+> JSON структура: **Проект → Задача** (двухуровневая, без дисциплин).  
+> SettingsReader читает все `*.json` из папки, имя файла не важно.
+
+
 ## Архитектура
 
 ```
@@ -43,267 +48,59 @@ CopyModels.sln
 Нет → Plugin
 ```
 
-## Соответствие Python → C#
+## Чеклист
 
-| Python файл | C# файл | Статус |
-|---|---|---|
-| `settings_classes.py → ProjectSettings` | `Core/Models/ProjectSettings.cs` | ✅ |
-| `settings_classes.py → ModelSetting` | `Core/Models/ModelSetting.cs` | ✅ |
-| `read_setting_file()` | `Core/Settings/SettingsReader.cs` | ✅ |
-| `serverTools.py` (FILE часть) | `Plugin/Services/FileService.cs` | ✅ |
-| `serverTools.py` (RSN часть) | `Plugin/Services/RevitServerService.cs` | ✅ |
-| `modelTools.py` | `Plugin/Services/ModelService.cs` | ✅ |
-| `eventsTools.py` | `Plugin/Services/EventService.cs` | ✅ |
-| `script.py` (точка входа) | `Plugin/CopyModelsCommand.cs` | ⏳ |
-| `*.json` конфиги | без изменений (этап 1) | ✅ |
+### Этап 1 ✅ Завершён
+- [x] ProjectSettings.cs
+- [x] ModelSetting.cs
+- [x] SettingsReader.cs
+- [x] FileService.cs
+- [x] RevitServerService.cs
+- [x] ModelService.cs
+- [x] EventService.cs
+- [x] CopyModelsCommand.cs
 
-## Чеклист реализации
+### Этап 2+3 ⏳ В работе
+- [x] RelayCommand.cs
+- [ ] SelectionViewModel.cs
+- [ ] ExportOptionsViewModel.cs
+- [ ] ProgressViewModel.cs
+- [ ] SelectionWindow.xaml
+- [ ] ExportOptionsWindow.xaml
+- [ ] ProgressWindow.xaml
 
-### Core/Models ✅
-- [x] `ProjectSettings.cs` — все поля и конструктор
-- [x] `ModelSetting.cs` — все поля и логика дат
+### Этап 4 ⏸
+- [ ] Windows Task Scheduler интеграция
 
-### Core/Settings ✅
-- [x] `SettingsReader.cs` — чтение JSON конфигов, парсинг структуры
-
-### Core/Tests ✅
-- [x] `CopyModels.ConsoleTest` — консольное тестирование
-- [x] 9 проверок SettingsReader — все пройдены ✅
-- [x] 4 теста RevitServerService — все пройдены ✅
-
-### Plugin/Services ✅
-- [x] `FileService.cs`
-- [x] `RevitServerService.cs`
-- [x] `ModelService.cs`
-- [x] `EventService.cs`
-
-### Plugin ✅
-- [x] `CopyModelsCommand.cs` ✅ готов и отлажен (сессия 10)
-
-### UI + новый JSON (Этап 2+3) ⏳
-- [ ] `UserConfig` класс — структура UI-генерируемого JSON
-- [ ] WPF визард: выбор проекта → модели → форматы
-- [ ] Сохранение в `C:\Users\%User%\Documents\CopyModels\`
-- [ ] Command обновляется для чтения нового формата
-
-### Планировщик (Этап 4) ⏳
-- [ ] Интеграция с Windows Task Scheduler
-- [ ] Чтение JSON из Documents без UI
-
-### PostgreSQL (Этап 5) ⏳
-- [ ] `SettingsRepository` — аналог `SettingsReader`, возвращает те же `ProjectSettings` из БД
-- [ ] Миграция конфигов из JSON в PostgreSQL (сервер уже есть)
-- [ ] Таблица истории запусков (когда, кто, какие модели, результат)
-- [ ] Общий доступ к конфигам с нескольких машин
-- [ ] `CopyModelsCommand` и все сервисы не меняются — только источник данных
-
----
-
-## Журнал сессий
-
-### Сессия 1 — архитектура проекта
-- Изучили Python оригинал
-- Спроектировали структуру C# решения
-- Решение: JSON конфиги оставляем в том же формате
-
-### Сессия 2 — ProjectSettings.cs (13.04.2026)
-- Создали Solution, два проекта Core и Plugin
-- Написали `ProjectSettings.cs`
-- Концепции: nullable bool?, JObject, pattern matching, XML-документация
-
-### Сессия 3 — ModelSetting.cs
-- Написали `ModelSetting.cs`
-- `DisplayName` форматируется для UI
-
-### Сессия 4 — SettingsReader.cs + тестирование (21.04.2026)
-- `SettingsReader.cs` + ConsoleTest проект
-- Все 6 проверок пройдены ✅
-
-### Сессия 5 — FileService.cs (10.05.2026)
-- Полный `FileService.cs` — файловая система, архив, маппинг диска
-- P/Invoke, DllImport, WNetAddConnection2
-- **Ключевое решение:** FileService / RevitServerService / ModelService — три отдельных сервиса
-
-### Сессия 6 — HTTP + RevitServerService.cs (18.05.2026)
-- Курс по HTTP в C# (WebRequest vs HttpClient)
-- Переделали на HttpClient синхронный
-
-### Сессия 7 — Тестирование RevitServerService (20.05.2026)
-- 4 теста, все пройдены ✅
-- Реальный запрос к `RSN://k-2133.atptlp.local/20175_INARCTICA` — 13 моделей
-
-### Сессия 8 — ModelService.cs
-- 620 строк: открытие, экспорт, сохранение, purge, transmit, worksets, виды
-- NWC(void) vs IFC(bool) — разные подходы проверки результата
-- CheckAndFixView() перед ExportModel() — избегаем вложенных транзакций
-
-### Сессия 9 — EventService.cs
-- Subscribe/Unsubscribe с guard проверкой
-- IDisposable паттерн — `using()` блок
-- Два Application объекта: `Application` для FailuresProcessing, `UIApplication` для DialogBoxShowing
-- Логирование через callbacks
-
-### Сессия 10 — Анализ Python оригинала + планирование (27.05.2026)
-
-**Разобрали полностью `Copy_Models_script.py`.**
-
-#### Как работает Python скрипт (важно для C# реализации)
-
-**Откуда берётся `discipline`:**
-`discipline` = имя JSON файла без расширения (`AR.json` → `"AR"`).
-Сохраняется в pyrevit config между запусками. `Shift+Click` → смена дисциплины.
-`"!BIM!"` — специальный режим, читаются все JSON файлы сразу.
-
-**Трёхуровневая структура выбора:**
-```
-1. Выбор дисциплины (файл конфига) — сохраняется между запусками
-2. Выбор заданий — SelectFromList, multiselect, группировка по проекту
-3. Выбор моделей — для каждого задания отдельно, "Not Actual" по умолчанию
-```
-
-**Три ветки логики обработки модели:**
-```
-is_exceed == true
-    → удалить или архивировать (модель есть в Target, но нет в Source)
-
-purge == true ИЛИ is_open_required() == true
-    → открыть Revit → purge → экспорт/сохранение → закрыть
-    (is_open_required: Source extension ≠ Target extension, или путь RSN)
-
-иначе
-    → простое копирование файла без открытия Revit
-```
-
-**Полный flow ветки "открыть Revit":**
-```
-1. Открыть (open_model_with_detach или open_ifc)
-2. Если IFC → divide_on_worksets, get_coordinates
-3. Найти/создать вид "NavisWorks"
-4. Если purge → clean_revit_file(doc)
-5. Для каждого target:
-   - .RVT → save_rvt()
-   - same extension → file_server_copy_model()
-   - другое расширение → export_rvt() [NWC или IFC]
-   - если transmit → transmit_model() + mark_ro()
-6. relinquish_doc() → Close() → Dispose()
-```
-
-**Решения принятые в сессии 10:**
-
-1. **JSON остаётся центром архитектуры.** Меняется только кто создаёт JSON — вручную сейчас, UI в будущем.
-
-2. **Этапы 2+3 идут параллельно** — UI создаёт JSON, Command читает новый формат. Разрывать нельзя.
-
-3. **Новый JSON формат добавит блок `Schedule`:**
-   ```json
-   "Schedule": { "Enabled": true, "DayOfWeek": "Monday", "Time": "23:00" }
-   ```
-   Старые конфиги продолжают работать без изменений.
-
-4. **Про дублирующиеся задания в реальном конфиге** (например `"From RVT RS to RVT FS"` и `"From RVT RS to RVT FS (purged)"`) — в UI-версии это будет одна запись с галочкой Purge.
-
-**Скелет CopyModelsCommand.cs:**
-```csharp
-public Result Execute(ExternalCommandData commandData, ...)
-{
-    var app = commandData.Application.Application;
-    var uiApp = commandData.Application;
-
-    using (var eventService = new EventService(app, uiApp, Log, LogWarning))
-    {
-        eventService.Subscribe();
-        var discipline = SelectDiscipline();              // уровень 1
-        var settings = SettingsReader.ReadDiscipline(...);
-        var selectedTasks = SelectTasks(settings);        // уровень 2
-        foreach (var task in selectedTasks)
-        {
-            var models = task.GetModelsSettings();        // уровень 3
-            foreach (var model in models)
-                ProcessModel(task, model, app);           // три ветки
-        }
-    }
-    return Result.Succeeded;
-}
-```
-
-### Сессия 11 — Отладка CopyModelsCommand.cs и переход на WPF UI (02.06.2026)
-
-**Успешная отладка плагина!** ✅
-
-#### Проблемы и решения
-
-1. **Проблема:** Лог показывал "Found 1 projects groups" и "No tasks found"
-   - **Причина:** `SettingsReader` ищет JSON в `C:\Users\{User}\Documents\CopyModels\`, а конфиг лежал в `C:\Users\GUV\Documents\000_CopyModels\`
-   - **Решение:** Обновили путь в `CopyModelsCommand.cs` строка 76-78
-
-2. **Проблема:** "Close error: The file is read-only, can not be saved"
-   - **Причина:** После `Transmit` файл становится read-only, `Close(true)` пытается сохранить
-   - **Решение:** Изменили `doc.Close(false)` в `ModelService.RelinquishAndClose()`
-
-3. **Проблема:** "Export failed: file not created at Temp"
-   - **Причина:** Неточность в JSON конфиге (путь с двойными слэшами)
-   - **Решение:** Исправили JSON формат
-
-#### Текущий статус Этап 1 ✅
-
-- ✅ JSON конфиги читаются корректно
-- ✅ Выбор проектов работает (TaskDialog)
-- ✅ Выбор задач работает (заглушка возвращает все)
-- ✅ Выбор моделей работает (SelectFromList с группировкой)
-- ✅ Открытие моделей с detach режимом
-- ✅ Закрытие worksets по маске
-- ✅ Экспорт в NWC с правильными параметрами
-- ✅ Archiving существующих файлов
-- ✅ Закрытие документов без ошибок
-- ✅ Обработка Revit диалогов (EventService)
-
-**Пример успешного лога:**
-```
-[INFO] Found 2 projects groups
-[INFO] Selected project/group: 000700
-[INFO] Found 1 models in P:\MOS-TLP\GROUPS\ALLGEMEIN\06_HKLS\GUV\00_CopyModels_Test
-[INFO] Processing: CopyModelsDebug
-[INFO] Opening (detach): P:\...\CopyModelsDebug.rvt
-[INFO] Exporting to: C:\Users\GUV\Documents\000_CopyModels\CopyModelsDebug.nwc
-[INFO] Export saved: C:\Users\GUV\Documents\000_CopyModels\CopyModelsDebug.nwc
-[INFO] Saved: C:\Users\GUV\Documents\000_CopyModels\CopyModelsDebug.nwc
-[INFO] Relinquish done.
-[INFO] Document closed
-```
-
-#### Следующий шаг: Этап 2 — WPF UI
-
-**Текущие проблемы UI (TaskDialog):**
-- Максимум 10 кнопок — плохо для множественного выбора
-- Нет чекбоксов для выбора нескольких элементов
-- Жёсткая логика, сложно добавить новые возможности
-
-**Решение: создать простое WPF окно вместо TaskDialog**
-- Две базовые формы: SelectionWindow для проектов и задач
-- Чекбоксы для множественного выбора
-- Переиспользуемая логика для будущих окон
+### Этап 5 ⏸
+- [ ] SettingsRepository (PostgreSQL)
+- [ ] История запусков
 
 ---
 
 ## Разделение ответственности между сервисами
 
-```
-┌─────────────────────────────────────────────────────┐
-│ ModelService (ТОЧКА ВХОДА)                          │
-│ ├─ GetModelDate(anyPath)  ← проверяет тип пути      │
-│ ├─ CopyModel(src, dst)    ← выбирает алгоритм       │
-│ └─ Зависит от FileService + RevitServerService      │
-│                                                     │
-│  ┌───────────────┐     ┌────────────────────────┐   │
-│  │ FileService   │     │ RevitServerService     │   │
-│  │ (ФАЙЛЫ)       │     │ (REVIT SERVER / RSN)   │   │
-│  └───────────────┘     └────────────────────────┘   │
-└─────────────────────────────────────────────────────┘
+FileService        — локальные файлы (P:, C:)
+RevitServerService — Revit Server (RSN://)
+ModelService       — открытие / экспорт / сохранение моделей Revit
+EventService       — подписка на события Revit, автозакрытие диалогов
 
-P:\Projects\Model.rvt          → FileService
-RSN://server/folder/Model.rvt  → RevitServerService
-```
 
+
+---
+
+## Журнал сессий
+
+### Сессии 1-11 — Plugin (завершено)
+Разработаны все сервисы Core и Plugin. CopyModelsCommand.cs отлажен.  
+Подробности в git-истории.
+
+### Сессия 12 — Начало WPF UI
+- Написан RelayCommand.cs (с generic версией RelayCommand\<T\>)
+- Создана структура ViewModels и Windows (пустые)
+- Архитектурное решение: убрали дисциплины, перешли на структуру Проект → Задача
+- SettingsReader.cs переписан под новую структуру
+- Следующий шаг: SelectionViewModel + SelectionWindow
 ---
 
 ## Полезные ссылки

@@ -18,6 +18,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CopyModels.Core", "CopyMode
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CopyModels.ConsoleTest", "CopyModels.ConsoleTest\CopyModels.ConsoleTest.csproj", "{8BCB0E9D-517B-451A-A236-9376DEE02D31}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CopyModels.UI", "CopyModels.UI\CopyModels.UI.csproj", "{8B7D8F45-D1EE-4315-B186-CF577A051388}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -36,6 +38,10 @@ Global
 		{8BCB0E9D-517B-451A-A236-9376DEE02D31}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8BCB0E9D-517B-451A-A236-9376DEE02D31}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8BCB0E9D-517B-451A-A236-9376DEE02D31}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8B7D8F45-D1EE-4315-B186-CF577A051388}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8B7D8F45-D1EE-4315-B186-CF577A051388}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8B7D8F45-D1EE-4315-B186-CF577A051388}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8B7D8F45-D1EE-4315-B186-CF577A051388}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

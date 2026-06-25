@@ -27,24 +27,22 @@ namespace CopyModels.Settings
         //
         // Публичный API
         //
-                
+
         /// <summary>
         /// Читает все .json файлы в папке и возвращает словаррь настроек.
         /// Ключ словаря - номер проекта.
         /// </summary>
         public Dictionary<string, List<ProjectSettings>> ReadAll()
-        {
-
-            var result = new Dictionary<string, List<ProjectSettings>>()
+        {                   
+            if (!Directory.Exists(_settingsFolder))
             {
-                ["ALL"] = new List<ProjectSettings>()
-            };
-
-            if (!Directory.Exists(_settingsFolder)) return result;
+                return new Dictionary<string, List<ProjectSettings>>() 
+                { ["ALL"] = new List<ProjectSettings>() };
+            }
 
             // Забираем все json файлы из папки 
-            var files  = Directory.GetFiles(_settingsFolder,"*.json");
-            
+            var files = Directory.GetFiles(_settingsFolder, "*.json");
+
             return ReadFiles(files);
         }
 
@@ -57,9 +55,9 @@ namespace CopyModels.Settings
             var result = new Dictionary<string, List<ProjectSettings>>()
             {
                 ["ALL"] = new List<ProjectSettings>()
-            };         
+            };
 
-            foreach ( var file in files)
+            foreach (var file in files)
             {
                 var json = File.ReadAllText(file, System.Text.Encoding.UTF8);
                 var root = JObject.Parse(json);
