@@ -59,10 +59,7 @@ namespace CopyModels.Plugin
                 foreach (var m in tgtList) exceedModels.Add(m);
             }
 
-            Func<string, double?> getDate = p =>
-                FileService.IsRevitServer(p)
-                    ? _rsnService.GetModelDate(p)
-                    : _fileService.GetModelDate(p);
+            var getDate = GetModelDateFunc();
 
             var result = new List<ModelSetting>();
             var srcDir = Path.GetDirectoryName(task.SourcePath);
@@ -312,9 +309,14 @@ namespace CopyModels.Plugin
             return targets;
         }
 
-        // 
+        //
         // Вспомогательные методы
         //
+
+        private Func<string, double?> GetModelDateFunc() =>
+            p => FileService.IsRevitServer(p)
+                ? _rsnService.GetModelDate(p)
+                : _fileService.GetModelDate(p);
 
         private void AddResult(
             ProjectSettings task,
@@ -345,6 +347,23 @@ namespace CopyModels.Plugin
             writer.WriteLine(line);
             writer.Flush();
         }
+
+        // Строит модели напрямую по списку из JSON, без сканирования папки — для headless-режима.
+        internal List<ModelSetting> HeadlessModelSettings(ProjectSettings task)
+        {
+            var srcDir = Path.GetDirectoryName(task.SourcePath);
+            var getDate = GetModelDateFunc();
+
+            var result = new List<ModelSetting>();
+            foreach (var relative in task.selectedModels)
+            {
+                var src = Path.Combine(srcDir, relative);
+                var targets = BuildTargetPath(src, srcDir, task);
+                result.Add(new ModelSetting(src, targets, getDate));
+            }
+            return result;
+        }
+
     }
 
     // Мини-утилита для относительных путей 

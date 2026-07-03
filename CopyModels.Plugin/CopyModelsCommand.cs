@@ -28,11 +28,9 @@ namespace CopyModels.Plugin
             var revitVersion = app.VersionNumber;
 
             // Логирование
-            var logDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                "000_CopyModels");
+            var logDir = AppPaths.LogDir;
             Directory.CreateDirectory(logDir);
-            var logPath = Path.Combine(logDir, $"CopyModels_{DateTime.Now: yyyyMMdd_HHmmss}.log");
+            var logPath = Path.Combine(logDir, $"CopyModels_{DateTime.Now:yyyyMMdd_HHmm}.log");
             var logWriter = new StreamWriter(logPath, append: false, System.Text.Encoding.UTF8);
 
             Action<string> logInfo = m => CopyModelsExecutor.WriteLog(logWriter, "INFO", m);
@@ -63,9 +61,7 @@ namespace CopyModels.Plugin
                 logInfo, logWarning, logError);
 
             // Путь к JSON конфигам
-            var documentPath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                "000_CopyModels");
+            var documentPath = AppPaths.ConfigDir;
 
             // Читаем единый конфигурационный файл
             var settingsReader = new SettingsReader(documentPath);
