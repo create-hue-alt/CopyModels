@@ -37,6 +37,11 @@ namespace CopyModels.Plugin
             Action<string> logWarning = m => CopyModelsExecutor.WriteLog(logWriter, "WARNING", m);
             Action<string> logError = m => CopyModelsExecutor.WriteLog(logWriter, "ERROR", m);
 
+            bool debugEnable = Environment.GetEnvironmentVariable("COPYMODELS_DEBUG") == "1";
+            Action<string> logDebug = debugEnable
+                ? (Action<string>)(m => CopyModelsExecutor.WriteLog(logWriter, "DEBUG", m))
+                : (m => { });
+
             logInfo($"Windows User  : {Environment.UserName}");
             logInfo($"PC            : {Environment.MachineName}");
             logInfo($"Revit Version : {revitVersion}");
@@ -52,13 +57,13 @@ namespace CopyModels.Plugin
             }
 
             // Сервисы
-             var fileService = new FileService(logInfo, logWarning, logError);
-            var rsnService = new RevitServerService(revitVersion, logInfo, logWarning, logError);
-            var modelService = new ModelService(app, fileService, logInfo, logWarning, logError);
-            var eventService = new EventService(app, uiApp, logInfo, logWarning);
-            
+            var fileService = new FileService(logInfo, logWarning, logError, logDebug);
+            var rsnService = new RevitServerService(revitVersion, logInfo, logWarning, logError, logDebug);
+            var modelService = new ModelService(app, fileService, logInfo, logWarning, logError, logDebug);
+            var eventService = new EventService(app, uiApp, logInfo, logWarning, logDebug);
+
             var executor = new CopyModelsExecutor(fileService, rsnService, modelService,
-                logInfo, logWarning, logError);
+                logInfo, logWarning, logError, logDebug);
 
             // Путь к JSON конфигам
             var documentPath = AppPaths.ConfigDir;
@@ -101,7 +106,7 @@ namespace CopyModels.Plugin
 
             // Строим список моделей выбранного проекта
             var allModels = executor.BuildModelSettings(selectedProject);
-            
+
             if (allModels.Count == 0)
             { logWriter.Dispose(); return Result.Cancelled; }
 
@@ -118,7 +123,7 @@ namespace CopyModels.Plugin
             modelWindow.ShowDialog();
 
             if (selectedModels == null || selectedModels.Count == 0)
-            { logWriter.Dispose( ); return Result.Cancelled; }
+            { logWriter.Dispose(); return Result.Cancelled; }
 
             // Выполнение задания
             eventService.Subscribe();

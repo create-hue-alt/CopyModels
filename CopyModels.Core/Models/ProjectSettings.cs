@@ -32,6 +32,7 @@ namespace CopyModels.Core.Models
         public bool KeepStructure { get; }
         public List<string> CopyExceptions { get; }
         public List<string> PathExceptions { get; }
+        public List<string> SelectedModels { get; }
         public bool DeleteMissed { get; }
 
         // Опция открытия / очистки
@@ -143,6 +144,7 @@ namespace CopyModels.Core.Models
 
             CopyExceptions = ParseStringList(settings["Copy Exceptions"]);
             PathExceptions = ParseStringList(settings["Path Exceptions"]);
+            SelectedModels = ParseStringList(settings["Selected Models"]);
 
             // Очистка /открытие
             Purge = settings["Purge"]?.Value<bool>() ?? false;

@@ -17,6 +17,7 @@ namespace CopyModels.Plugin
         private readonly Action<string> _logInfo;
         private readonly Action<string> _logWarning;
         private readonly Action<string> _logError;
+        private readonly Action<string> _logDebug;
         private Dictionary<string, List<string[]>> _resultTable;
 
         internal CopyModelsExecutor(
@@ -25,7 +26,8 @@ namespace CopyModels.Plugin
             ModelService modelService,
             Action<string> logInfo,
             Action<string> logWarning,
-            Action<string> logError)
+            Action<string> logError,
+            Action<string> logDebug)
         {
             _fileService = fileService;
             _rsnService = rsnService;
@@ -34,6 +36,7 @@ namespace CopyModels.Plugin
             _logWarning = logWarning;
             _logError = logError;
             _resultTable = new Dictionary<string, List<string[]>>();
+            _logDebug = logDebug;
         }
 
         // 
@@ -228,6 +231,10 @@ namespace CopyModels.Plugin
                     }
 
                 }
+                catch (Exception ex) 
+                {
+                    _logError($"Unexpected error processing {modelName} : {ex.Message}\n{ex.StackTrace}");
+                }
                 finally
                 {
                     if (doc != null)
@@ -355,7 +362,7 @@ namespace CopyModels.Plugin
             var getDate = GetModelDateFunc();
 
             var result = new List<ModelSetting>();
-            foreach (var relative in task.selectedModels)
+            foreach (var relative in task.SelectedModels)
             {
                 var src = Path.Combine(srcDir, relative);
                 var targets = BuildTargetPath(src, srcDir, task);

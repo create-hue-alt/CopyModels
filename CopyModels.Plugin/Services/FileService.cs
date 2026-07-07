@@ -16,15 +16,18 @@ namespace CopyModels.Plugin.Services
         private readonly Action<string> _logInfo;
         private readonly Action<string> _logWarning;
         private readonly Action<string> _logError;
+        private readonly Action<string> _logDebug;
 
         public FileService(
             Action<string> logInfo = null,
             Action<string> logWarning = null,
-            Action<string> logError = null)
+            Action<string> logError = null,
+            Action<string> logDebug = null)
         {
             _logInfo = logInfo ?? (_ => { });
             _logWarning = logWarning ?? (_ => { });
             _logError = logError ?? (_ => { });
+            _logDebug = logDebug ?? (_ => { });
         }
 
         //

@@ -10,8 +10,13 @@ using System.Linq;
 
 namespace CopyModels.Plugin
 {
+    /// <summary>
+    /// Headles - точка входа плагина: запускает задачу без диалогв при старте Revit,
+    /// если выставлена переменная окружения COPYMODELS_AUTORAUN=1 (используется Task Scheduler).
+    /// </summary>
+
     [Autodesk.Revit.Attributes.Regeneration(Autodesk.Revit.Attributes.RegenerationOption.Manual)]
-    internal class CopyModelsApplication : IExternalApplication
+    public class CopyModelsApplication : IExternalApplication
     {
         public Result OnStartup(UIControlledApplication application)
         {
@@ -39,10 +44,17 @@ namespace CopyModels.Plugin
             Action<string> logWarning = m => CopyModelsExecutor.WriteLog(logWriter, "WARNING", m);
             Action<string> logError = m => CopyModelsExecutor.WriteLog(logWriter, "ERROR", m);
 
+            bool debugEnable = Environment.GetEnvironmentVariable("COPYMODELS_DEBUG") == "1";
+            Action<string> logDebug = debugEnable
+                ? (Action<string>)(m => CopyModelsExecutor.WriteLog(logWriter, "DEBUG", m))
+                : (m => { });
+
             // Сервисы (без UIApplication - headless)
-            var fileService = new FileService(logInfo, logWarning, logError);
-            var rsnService = new RevitServerService(app.VersionNumber, logInfo, logWarning, logError);
-            var modelService = new ModelService(app, fileService, logInfo, logWarning, logError);
+            var uiApp = new UIApplication(app);
+            var fileService = new FileService(logInfo, logWarning, logError, logDebug);
+            var rsnService = new RevitServerService(app.VersionNumber, logInfo, logWarning, logError, logDebug);
+            var modelService = new ModelService(app, fileService, logInfo, logWarning, logError, logDebug);
+            var eventService = new EventService(app, uiApp, logInfo, logWarning, logDebug);
 
             // Читаем конфиги
             var documentPath = AppPaths.ConfigDir;
@@ -54,29 +66,35 @@ namespace CopyModels.Plugin
                 ? settings["ALL"]
                 : new List<ProjectSettings>();
             var task = allProjects.FirstOrDefault(p => p.Project == projectId);
-            if (task == null) { /* logError*/ return; }
+            if (task == null)
+            {
+                logError($"Project not found {projectId}");
+                logWriter.Dispose();
+                return;
+            }
 
             // Map drive если нужно
             if (task.MapDrive != null) fileService.MapDrive(task.MapDrive, task.DrivePath);
 
             // Executor - все модели без диалогв
             var executor = new CopyModelsExecutor(fileService, rsnService, modelService,
-                logInfo, logWarning, logError);
-            var models = executor.HeadlessModelSettings(task);
-            executor.RunTask(task, models);
+                logInfo, logWarning, logError, logDebug);
 
+            eventService.Subscribe();
             try
             {
                 logInfo($"Starting Headless task: {task.DisplayName} ");
+                var models = executor.HeadlessModelSettings(task);
+                executor.RunTask(task, models);
             }
             finally
             {
+                eventService.Unsubscribe();
                 logWriter.Dispose();
             }
 
 
             // Выход из Revit
-            var uiApp = new UIApplication(app);
             uiApp.PostCommand(RevitCommandId.LookupPostableCommandId(PostableCommand.ExitRevit));
         }
     }
