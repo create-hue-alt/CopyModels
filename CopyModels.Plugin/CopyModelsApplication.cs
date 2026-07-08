@@ -1,4 +1,4 @@
-﻿using Autodesk.Revit.DB.Events;
+﻿using Autodesk.Revit.UI.Events;
 using Autodesk.Revit.UI;
 using CopyModels.Core.Models;
 using CopyModels.Plugin.Services;
@@ -23,16 +23,19 @@ namespace CopyModels.Plugin
             if (Environment.GetEnvironmentVariable("COPYMODELS_AUTORUN") != "1")
                 return Result.Succeeded;
 
-            application.ControlledApplication.ApplicationInitialized += OnInitialized;
+            application.Idling += OnIdling;
             return Result.Succeeded;
         }
 
         public Result OnShutdown(UIControlledApplication application) =>
             Result.Succeeded;
 
-        private void OnInitialized(object sender, ApplicationInitializedEventArgs e)
+        private void OnIdling(object sender, IdlingEventArgs e)
         {
-            var app = (Autodesk.Revit.ApplicationServices.Application)sender;
+            var uiApp = (UIApplication)sender;
+            uiApp.Idling -= OnIdling;
+
+            var app = uiApp.Application;
             var projectId = Environment.GetEnvironmentVariable("COPYMODELS_PROJECT");
 
             var logDir = AppPaths.LogDir;
@@ -50,7 +53,6 @@ namespace CopyModels.Plugin
                 : (m => { });
 
             // Сервисы (без UIApplication - headless)
-            var uiApp = new UIApplication(app);
             var fileService = new FileService(logInfo, logWarning, logError, logDebug);
             var rsnService = new RevitServerService(app.VersionNumber, logInfo, logWarning, logError, logDebug);
             var modelService = new ModelService(app, fileService, logInfo, logWarning, logError, logDebug);

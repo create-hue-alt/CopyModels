@@ -2,6 +2,7 @@
 using Autodesk.Revit.DB;
 using CopyModels.Core.Models;
 using CopyModels.Plugin.Services;
+using CopyModels.Settings;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -105,17 +106,22 @@ namespace CopyModels.Plugin
         // Обработка выбранных моделей
         // 
 
-        internal void RunTask(
-            ProjectSettings task,
-            List<ModelSetting> models)
+        internal void RunTask(ProjectSettings task, List<ModelSetting> models)
         {
             _logInfo($"Project: {task.Project} - {task.DisplayName}");
             _resultTable[task.DisplayName] = new List<string[]>();
 
             try
             {
-                foreach (var model in models)
-                    ProcessModel(model, task);
+                for (int i = 0; i < models.Count; i++)
+                {
+                    bool ok = ProcessModel(models[i], task);
+                    if(!ok && i == 0)
+                    {
+                        _logWarning("First model failed, retrying full open/export cycle once");
+                        ProcessModel(models[i], task);
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -127,10 +133,10 @@ namespace CopyModels.Plugin
         // Обработка одной модели
         // 
 
-        private void ProcessModel(
-            ModelSetting model,
-            ProjectSettings task)
+        private bool ProcessModel(ModelSetting model, ProjectSettings task)
         {
+            bool success = true;
+
             var modelName = Path.GetFileNameWithoutExtension(model.SourcePath);
             _logInfo($"Processing: {modelName}");
 
@@ -150,7 +156,7 @@ namespace CopyModels.Plugin
                     File.Delete(model.SourcePath);
                     AddResult(task, modelName, "Deleted", model.SourcePath, "");
                 }
-                return;
+                return true;
             }
 
             var srcExt = Path.GetExtension(model.SourcePath).ToUpper();
@@ -169,13 +175,15 @@ namespace CopyModels.Plugin
                     if (doc == null)
                     {
                         _logError($"Could not open: {model.SourcePath}");
-                        return;
+                        return false;
                     }
 
                     // Убедиться что есть NavisWorks вид
-                    var view = _modelService.GetViewByName(doc, "Navisworks");
+                    var defaultView = AppDefaults.NavisworksViewName;
+
+                    var view = _modelService.GetViewByName(doc, defaultView);
                     if (view == null)
-                        view = _modelService.Create3DView(doc, "Navisworks");
+                        view = _modelService.Create3DView(doc, defaultView);
 
                     if (task.Purge)
                         _modelService.PurgeDocument(doc);
@@ -196,12 +204,27 @@ namespace CopyModels.Plugin
                                 doc,
                                 targetPath,
                                 task.BackupFolder,
-                                viewName ?? "Navisworks",
+                                viewName ?? defaultView,
                                 task.NwcAllProperties,
                                 task.NwcRoom,
                                 task.NwcDivideIntoLevels,
                                 task.NwcLinkedFiles,
                                 task.IfcSettings);
+
+                            //if (!ok)
+                            //{
+                            //    _logWarning($"Export failed, retrying once: {targetPath}");
+                            //    ok = _modelService.ExportModel(
+                            //        doc,
+                            //        targetPath,
+                            //        task.BackupFolder,
+                            //        viewName ?? defaultView,
+                            //        task.NwcAllProperties,
+                            //        task.NwcRoom,
+                            //        task.NwcDivideIntoLevels,
+                            //        task.NwcLinkedFiles,
+                            //        task.IfcSettings);
+                            //}
                         }
 
                         if (ok)
@@ -227,19 +250,22 @@ namespace CopyModels.Plugin
                         else
                         {
                             _logError($"Export failed: {targetPath}");
+                            success = false;
                         }
                     }
 
                 }
-                catch (Exception ex) 
+                catch (Exception ex)
                 {
                     _logError($"Unexpected error processing {modelName} : {ex.Message}\n{ex.StackTrace}");
+                    success = false;
                 }
                 finally
                 {
                     if (doc != null)
                         _modelService.RelinquishAndClose(doc);
                 }
+                return success;
 
             }
             // Простое копирование
@@ -272,6 +298,8 @@ namespace CopyModels.Plugin
                         _logError($"Copy failed: {model.SourcePath} -> {targetPath}");
                     }
                 }
+
+                return true;
             }
         }
 

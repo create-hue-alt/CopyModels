@@ -131,13 +131,6 @@ namespace CopyModels.Core.Models
         /// </summary>
         public static (string path, string view) SplitTarget(string raw)
         {
-            /*
-            var idx= raw.IndexOf('>');
-            return idx < 0
-                ? (raw, "Navisworks")
-                : (raw.Substring(0, idx), raw.Substring(idx + 1));
-            */
-
             if (string.IsNullOrEmpty(raw)) return (null, null);
 
             var parts = raw.Split(new[] {'>'}, StringSplitOptions.None );

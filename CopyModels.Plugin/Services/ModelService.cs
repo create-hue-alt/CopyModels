@@ -1,6 +1,7 @@
 ﻿using Autodesk.Revit.ApplicationServices;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.IFC;
+using CopyModels.Settings;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -186,7 +187,7 @@ namespace CopyModels.Plugin.Services
             Document doc,
             string targetPath,
             string archiveFolder = null,
-            string viewName = "Navisworks",
+            string viewName = AppDefaults.NavisworksViewName,
             bool nwcAllProperties = true,
             bool nwcRoom = false,
             bool nwcDivideIntoLevels = true,
@@ -204,10 +205,10 @@ namespace CopyModels.Plugin.Services
 
             // Найти вид
             var view = GetViewByName(doc, viewName);
-            if (view == null && viewName.Equals("Navisworks", StringComparison.OrdinalIgnoreCase))
+            if (view == null && viewName.Equals(AppDefaults.NavisworksViewName, StringComparison.OrdinalIgnoreCase))
             {
                 _logWarning($"No Navisworks view found in {doc.Title}, creating new.");
-                view = Create3DView(doc, "Navisworks");
+                view = Create3DView(doc, AppDefaults.NavisworksViewName);
             }
             if (view == null)
             {
