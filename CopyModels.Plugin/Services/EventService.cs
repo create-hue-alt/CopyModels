@@ -62,8 +62,6 @@ namespace CopyModels.Plugin.Services
 
         private void OnFailureProcessing(object sender, FailuresProcessingEventArgs e)
         {
-            _logInfo($"FailuresProcessing in {sender}");
-
             var accessor = e.GetFailuresAccessor();
             var messages = accessor.GetFailureMessages();
 

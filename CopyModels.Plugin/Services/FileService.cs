@@ -241,6 +241,7 @@ namespace CopyModels.Plugin.Services
             
             // Проверяем текущие подключение
             var currentPath = GetConnectionPath(driverLetterNorm);
+            _logDebug($"Current connection for {driverLetterNorm}: {currentPath ??  "(none)"}");
             if (currentPath == networkPath)
             {
                 _logInfo($"Drive {driverLetterNorm} already mapped correctly.");
@@ -249,6 +250,7 @@ namespace CopyModels.Plugin.Services
                         
             if (Directory.Exists(driverLetterNorm + "\\"))
             {
+                _logDebug($"Disconnecting existing mapping on {driverLetter} before remap");
                 var disconnectResult = WNetCancelConnection2(driverLetter, 1, true);
                 if (disconnectResult != 0)
                 {

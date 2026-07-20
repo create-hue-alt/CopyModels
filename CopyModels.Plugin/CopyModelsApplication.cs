@@ -12,7 +12,7 @@ namespace CopyModels.Plugin
 {
     /// <summary>
     /// Headles - точка входа плагина: запускает задачу без диалогв при старте Revit,
-    /// если выставлена переменная окружения COPYMODELS_AUTORAUN=1 (используется Task Scheduler).
+    /// если выставлена переменная окружения COPYMODELS_AUTORUN=1 (используется Task Scheduler).
     /// </summary>
 
     [Autodesk.Revit.Attributes.Regeneration(Autodesk.Revit.Attributes.RegenerationOption.Manual)]

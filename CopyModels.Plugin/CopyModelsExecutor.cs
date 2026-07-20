@@ -116,10 +116,12 @@ namespace CopyModels.Plugin
                 for (int i = 0; i < models.Count; i++)
                 {
                     bool ok = ProcessModel(models[i], task);
+                    _logDebug($"ProcessModel result [{i}] {Path.GetFileNameWithoutExtension(models[i].SourcePath)}: {ok}");
                     if(!ok && i == 0)
                     {
                         _logWarning("First model failed, retrying full open/export cycle once");
-                        ProcessModel(models[i], task);
+                        bool retryOk = ProcessModel(models[i], task);
+                        _logDebug($"Retry result: {retryOk}");
                     }
                 }
             }
@@ -209,22 +211,7 @@ namespace CopyModels.Plugin
                                 task.NwcRoom,
                                 task.NwcDivideIntoLevels,
                                 task.NwcLinkedFiles,
-                                task.IfcSettings);
-
-                            //if (!ok)
-                            //{
-                            //    _logWarning($"Export failed, retrying once: {targetPath}");
-                            //    ok = _modelService.ExportModel(
-                            //        doc,
-                            //        targetPath,
-                            //        task.BackupFolder,
-                            //        viewName ?? defaultView,
-                            //        task.NwcAllProperties,
-                            //        task.NwcRoom,
-                            //        task.NwcDivideIntoLevels,
-                            //        task.NwcLinkedFiles,
-                            //        task.IfcSettings);
-                            //}
+                                task.IfcSettings);                            
                         }
 
                         if (ok)
