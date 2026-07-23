@@ -82,6 +82,9 @@ namespace CopyModels.Plugin
             var executor = new CopyModelsExecutor(fileService, rsnService, modelService,
                 logInfo, logWarning, logError, logDebug);
 
+            var watchdog = new DialogWatchdogService(logWarning, logDebug);
+            watchdog.Start();
+
             eventService.Subscribe();
             try
             {
@@ -92,6 +95,7 @@ namespace CopyModels.Plugin
             finally
             {
                 eventService.Unsubscribe();
+                watchdog.Stop();
                 logWriter.Dispose();
             }
 
