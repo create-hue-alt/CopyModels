@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CopyModels.Settings;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -41,7 +42,7 @@ namespace CopyModels.Plugin.Services
         public double? GetModelDate(string path)
         {
             if (string.IsNullOrEmpty(path)) return null;
-            if (IsRevitServer(path)) return null;
+            if (AppDefaults.IsRevitServer(path)) return null;
             if (!File.Exists(path)) return null;
 
             var fileInfo = new FileInfo(path);
@@ -104,7 +105,7 @@ namespace CopyModels.Plugin.Services
         /// </summary>
         public string ArchiveModel(string modelPath, string archiveTemplate)
         {
-            if (IsRevitServer(modelPath))
+            if (AppDefaults.IsRevitServer(modelPath))
             {
                 _logInfo($"Archiving not supported for Revit Server: {modelPath}");
                 return null;
@@ -214,7 +215,7 @@ namespace CopyModels.Plugin.Services
         /// </summary>
         public List<string> ReadModels(string pathPattern, IEnumerable<string> exceptions = null)
         {
-            if (IsRevitServer(pathPattern))
+            if (AppDefaults.IsRevitServer(pathPattern))
                 return new List<string>();  // см. RevitServerService.ReadRevitServerModels
 
             var folder = Path.GetDirectoryName(pathPattern) ?? pathPattern;
@@ -285,11 +286,7 @@ namespace CopyModels.Plugin.Services
 
         //
         // Утилиты
-        //
-
-        /// <summary>Проверяет, является ли путь адресом Revit Server (начинается с RSN).</summary>
-        public static bool IsRevitServer(string path) =>
-            path != null && path.StartsWith("RSN", StringComparison.OrdinalIgnoreCase);
+        //              
         
         /// <summary>Создаёт директорию для файла, если она не существует.</summary>
         public void EnsureDirectory(string filePath)

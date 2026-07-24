@@ -48,7 +48,7 @@ namespace CopyModels.Plugin
         {
             // Получаем источники
             List<string> sources;
-            if (FileService.IsRevitServer(task.SourcePath))
+            if (AppDefaults.IsRevitServer(task.SourcePath))
                 sources = _rsnService.ReadRevitServerModels(Path.GetDirectoryName(task.SourcePath));
             else
                 sources = _fileService.ReadModels(task.SourcePath, task.PathExceptions);
@@ -57,7 +57,7 @@ namespace CopyModels.Plugin
             var exceedModels = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var tgt in task.TargetPaths)
             {
-                var tgtList = FileService.IsRevitServer(tgt)
+                var tgtList = AppDefaults.IsRevitServer(tgt)
                     ? _rsnService.ReadRevitServerModels(Path.GetDirectoryName(tgt))
                     : _fileService.ReadModels(tgt, task.PathExceptions);
                 foreach (var m in tgtList) exceedModels.Add(m);
@@ -263,8 +263,8 @@ namespace CopyModels.Plugin
                     var (targetPath, _) = ModelSetting.SplitTarget(targetRaw);
 
                     bool ok;
-                    if (FileService.IsRevitServer(model.SourcePath) &&
-                        FileService.IsRevitServer(targetPath))
+                    if (AppDefaults.IsRevitServer(model.SourcePath) &&
+                        AppDefaults.IsRevitServer(targetPath))
                     { ok = _rsnService.CopyOnRevitServer(model.SourcePath, targetPath); }
                     else
                     { ok = _fileService.CopyFile(model.SourcePath, targetPath, task.BackupFolder); }
@@ -316,7 +316,7 @@ namespace CopyModels.Plugin
                 }
 
                 // Нормализация слещей
-                targetPath = FileService.IsRevitServer(targetPath)
+                targetPath = AppDefaults.IsRevitServer(targetPath)
                     ? targetPath.Replace("\\", "/")
                     : targetPath.Replace("/", "\\");
 
@@ -331,12 +331,12 @@ namespace CopyModels.Plugin
             return targets;
         }
 
-        //
+        //S
         // Вспомогательные методы
         //
 
         private Func<string, double?> GetModelDateFunc() =>
-            p => FileService.IsRevitServer(p)
+            p => AppDefaults.IsRevitServer(p)
                 ? _rsnService.GetModelDate(p)
                 : _fileService.GetModelDate(p);
 

@@ -114,8 +114,8 @@ namespace CopyModels.Core.Models
             if (IsExceed) return false;
 
             var srcExt = Path.GetExtension(SourcePath).ToUpper();
-            var srcIsRsn = SourcePath.StartsWith("RSN", StringComparison.OrdinalIgnoreCase);
-            var hasRsnTgt = Targets.Any(t => SplitTarget(t).path.StartsWith("RSN", StringComparison.OrdinalIgnoreCase));
+            var srcIsRsn = AppDefaults.IsRevitServer(SourcePath);
+            var hasRsnTgt = Targets.Any(t => AppDefaults.IsRevitServer(SplitTarget(t).path));
             var extMismatch = Targets.Any(t =>
                 !Path.GetExtension(SplitTarget(t).path).ToUpper().Equals(srcExt, StringComparison.OrdinalIgnoreCase));
 

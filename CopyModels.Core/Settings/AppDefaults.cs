@@ -11,5 +11,11 @@
         public const string AllProjectsKey = "ALL";
 
         public const double ActualityToleranceSeconds = 60; // 1 минута допуск, как в Python
+
+        public const string RevitServerPrefix = "RSN";
+
+        /// <summary>Проверяет, является ли путь адресом Revit Server (начинается с RSN).</summary>
+        public static bool IsRevitServer(string path) =>
+            path != null && path.StartsWith(RevitServerPrefix,System.StringComparison.OrdinalIgnoreCase);
     }
 }

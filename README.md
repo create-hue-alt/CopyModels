@@ -34,14 +34,18 @@
 - [x] `EventService.cs` ✅
 - [x] `CopyModelsCommand.cs` ✅ — точка входа, отлажена
 
-**Этап 2+3 — WPF UI + новый JSON формат (в разработке ⏳)**
-- [ ] WPF визард создания конфига
-- [ ] `UserConfig` класс — UI-генерируемый JSON
-- [ ] Сохранение в `C:\Users\%User%\Documents\CopyModels\`
+**Этап 2+3 — WPF UI + новый JSON формат (в основном готово ⏳)**
+- [x] `ProjectSelectionWindow` + `ProjectSelectionViewModel` — выбор проекта, подключено к `CopyModelsCommand`
+- [x] `ModelSelectionWindow` + `ModelSelectionViewModel` — выбор моделей (чекбоксы, Check/Uncheck/Toggle All)
+- [ ] `ProgressWindow` + `ProgressViewModel` — файлы созданы, не подключены (выполнение пока синхронное)
+- [ ] `ExportOptionsWindow` + `ExportOptionsViewModel` — не создано, ViewModel пустая заглушка
+- [ ] `UserConfig` класс — UI-генерируемый JSON (создание/редактирование конфига через UI)
 
-**Этап 4 — Планировщик**
-- [ ] Windows Task Scheduler интеграция
-- [ ] Автозапуск по расписанию без UI
+**Этап 4 — Планировщик (завершён ✅)**
+- [x] `CopyModelsApplication.cs` — `IExternalApplication`, headless-автозапуск без диалогов
+- [x] `CopyModelsExecutor.cs` — общий движок, вынесен из `CopyModelsCommand`
+- [x] `DialogWatchdogService.cs` — UI Automation вотчдог для зависающих системных диалогов
+- [x] Windows Task Scheduler интеграция — bat-файл + задача настроены и протестированы
 
 **Этап 5 — PostgreSQL вместо JSON**
 - [ ] `SettingsRepository` — новый класс, возвращает те же `ProjectSettings` из БД
@@ -59,22 +63,33 @@ CopyModels.sln
 │   │   ├── ProjectSettings.cs     ✅
 │   │   └── ModelSetting.cs        ✅
 │   └── Settings/
-│       └── SettingsReader.cs      ✅
+│       ├── SettingsReader.cs      ✅
+│       ├── AppPaths.cs            ✅ — пути к конфигам/логам
+│       └── AppDefaults.cs         ✅ — общие константы (env-переменные, "ALL", допуски)
 │
 ├── CopyModels.Plugin         — требует RevitAPI.dll
 │   ├── Services/
 │   │   ├── FileService.cs                ✅
 │   │   ├── RevitServerService.cs         ✅
 │   │   ├── ModelService.cs               ✅
-│   │   └── EventService.cs               ✅
-│   └── CopyModelsCommand.cs              ✅
+│   │   ├── EventService.cs               ✅
+│   │   └── DialogWatchdogService.cs      ✅ — вотчдог для системных диалогов
+│   ├── CopyModelsExecutor.cs             ✅ — общий движок обработки моделей
+│   ├── CopyModelsCommand.cs              ✅ — интерактивная точка входа
+│   └── CopyModelsApplication.cs          ✅ — headless точка входа (Task Scheduler)
 │
 ├── CopyModels.ConsoleTest    — тестирование Core (без Revit) ✅
 │   ├── Program.cs
 │   ├── TestRevitServer.cs
 │   └── TestConfigs/
 │
-└── CopyModels.UI             — WPF интерфейс (этап 2+3) ⏳
+└── CopyModels.UI             — WPF интерфейс (этап 2+3) ⏳ в основном готово
+    ├── Commands/RelayCommand.cs                    ✅
+    ├── ViewModels/ProjectSelectionViewModel.cs     ✅
+    ├── ViewModels/ModelSelectionViewModel.cs       ✅
+    ├── ViewModels/ProgressViewModel.cs             ⏳ заглушка
+    ├── ViewModels/ExportOptionsViewModel.cs        ⏳ заглушка
+    └── Windows/ (ProjectSelectionWindow, ModelSelectionWindow ✅; ProgressWindow ⏳)
 ```
 
 ## Структура JSON конфига
@@ -125,7 +140,7 @@ JSON остаётся единственным источником правды
 
 | Python файл | C# аналог | Статус |
 |---|---|---|
-| `Copy_Models_script.py` | `CopyModelsCommand.cs` | ⏳ |
+| `Copy_Models_script.py` | `CopyModelsCommand.cs` / `CopyModelsApplication.cs` | ✅ |
 | `settings_classes.py` | `ProjectSettings.cs` + `ModelSetting.cs` | ✅ |
 | `modelTools.py` | `ModelService.cs` | ✅ |
 | `serverTools.py` | `FileService.cs` + `RevitServerService.cs` | ✅ |

@@ -374,7 +374,7 @@ namespace CopyModels.Plugin.Services
                             bool transmit = true,
                             bool relativeLinks = false)
         {
-            if (FileService.IsRevitServer(path))
+            if (AppDefaults.IsRevitServer(path))
             {
                 _logInfo("Transmit not required for Revit Server");
                 return true;

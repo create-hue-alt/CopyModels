@@ -8,13 +8,21 @@ Revit плагин на C#. Переписываем с Python (PyRevit) на C#
 
 CopyModels.sln
 ├── CopyModels.Core      — без Revit API ✅ (Models, Settings)
-├── CopyModels.Plugin    — требует RevitAPI.dll ✅ (Services, CopyModelsCommand)
+├── CopyModels.Plugin    — требует RevitAPI.dll ✅ (Services, CopyModelsExecutor, CopyModelsCommand, CopyModelsApplication)
 ├── CopyModels.ConsoleTest — тестирование ✅
-└── CopyModels.UI        — WPF интерфейс ⏳ (этап 2, в работе)
-
-
+└── CopyModels.UI        — WPF интерфейс ⏳ (этап 2, в основном готово)
 
 Правило: "Скомпилируется без RevitAPI.dll?" → Core, иначе → Plugin
+
+### Точки входа Plugin
+- `CopyModelsCommand` — `IExternalCommand`, интерактивный запуск по кнопке в ленте,
+  показывает окна выбора проекта/моделей из CopyModels.UI.
+- `CopyModelsApplication` — `IExternalApplication`, headless-автозапуск при старте Revit
+  (читает `COPYMODELS_AUTORUN`/`COPYMODELS_PROJECT`/`COPYMODELS_DEBUG` из окружения).
+- `CopyModelsExecutor` — общий движок обработки моделей, используется обоими входами.
+- `DialogWatchdogService` — UI Automation вотчдог, автоматически закрывает системный
+  диалог NWC-экспортера ("No suitable geometry found"), который иначе блокирует
+  headless-прогон намертво.
 
 ## Структура JSON конфига
 
@@ -33,15 +41,22 @@ CopyModels.sln
 Текущий статус
 Этап	Статус
 1 — Plugin + CopyModelsCommand.cs	✅ Готов
-2+3 — WPF UI + JSON формат	⏳ В работе
-4 — Планировщик	⏸ Позже
+2+3 — WPF UI + JSON формат	⏳ В основном готово
+4 — Планировщик (headless autorun + Task Scheduler)	✅ Готов
 5 — PostgreSQL	⏸ Позже
-CopyModels.UI: RelayCommand ✅, ViewModels созданы но пустые, XAML окна пустые.
+CopyModels.UI: RelayCommand ✅, ProjectSelectionWindow ✅ (подключено к CopyModelsCommand),
+ModelSelectionWindow ✅ (подключено к CopyModelsCommand), ProgressWindow — файлы есть,
+но не подключены (выполнение пока синхронное без индикации прогресса),
+ExportOptionsWindow — не создано (ViewModel пустая заглушка).
 
 Ключевые решения
 Концепция "дисциплин" удалена. Разделение: Проект → Задача.
 JSON — единственный источник правды. UI будет генерировать JSON.
 Этапы 2 и 3 параллельно: UI создаёт JSON, Command читает его.
+Логика Command/Application разделена: CopyModelsExecutor — общий движок,
+CopyModelsCommand — интерактивный UI, CopyModelsApplication — headless без диалогов.
+Магические строки/константы (env-переменные, ключ "ALL", допуски) вынесены в AppDefaults.
+
 Зависимости
 .NET Framework 4.8
 Newtonsoft.Json (NuGet)
