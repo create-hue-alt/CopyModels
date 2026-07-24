@@ -6,12 +6,16 @@ using System.Windows.Automation;
 
 namespace CopyModels.Plugin.Services
 {
+    /// <summary>
+    /// Win32/UI Automation вотчдог для системных диалогов, которые не ловит EventService
+    /// (не через RevitAPI, а через сторонние окна - например, зависший экспортер NWC)
+    /// </summary>
     internal class DialogWatchdogService : IDisposable
     {
         private const string TargetWindowTitle = "Navisworks NWC Exporter";
         private const string OkButtonAutomationId = "2";
         private const int PollIntervalMs = 1000;
-
+        
         private readonly Action<string> _logWarning;
         private readonly Action<string> _logDebug;
         private Timer _timer;

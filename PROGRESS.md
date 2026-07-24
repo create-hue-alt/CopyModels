@@ -99,6 +99,12 @@ CopyModels.sln
 - [ ] SettingsRepository (PostgreSQL)
 - [ ] История запусков
 
+### Этап 6 ⏸ Если дойдём
+- [ ] Переход с самодельного логирования (Action<string> logInfo/logWarning/logError/logDebug)
+      на Serilog или NLog
+- [ ] Sinks (файл/консоль/email при ERROR), ротация и retention логов
+- [ ] Структурированные логи вместо plain text
+
 ---
 
 ## Разделение ответственности между сервисами

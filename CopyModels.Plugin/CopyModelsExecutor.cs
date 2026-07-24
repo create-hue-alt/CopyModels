@@ -10,6 +10,11 @@ using System.Linq;
 
 namespace CopyModels.Plugin
 {
+    /// <summary>
+    /// Общий движок обработки моделей: обход списка, retry модели при сбое,
+    /// вызов сервисов (File/RevitServer/Model). Используется CopyModelsCommand,
+    /// и в CopyModelsApplication.
+    /// </summary>
     internal class CopyModelsExecutor
     {
         private readonly FileService _fileService;

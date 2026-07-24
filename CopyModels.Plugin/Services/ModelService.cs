@@ -9,6 +9,10 @@ using System.Linq;
 
 namespace CopyModels.Plugin.Services
 {
+    /// <summary>
+    /// Открытие, экспорт и сохранение моделей через RevitAPI
+    /// (RVT/NWC/IFC, purge, worksets, transmit)
+    /// </summary>
     internal class ModelService
     {
         private readonly Application _app;

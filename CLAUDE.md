@@ -44,6 +44,7 @@ CopyModels.sln
 2+3 — WPF UI + JSON формат	⏳ В основном готово
 4 — Планировщик (headless autorun + Task Scheduler)	✅ Готов
 5 — PostgreSQL	⏸ Позже
+6 — Нормальный логгер (Serilog/NLog вместо Action<string>)	⏸ Если дойдём
 CopyModels.UI: RelayCommand ✅, ProjectSelectionWindow ✅ (подключено к CopyModelsCommand),
 ModelSelectionWindow ✅ (подключено к CopyModelsCommand), ProgressWindow — файлы есть,
 но не подключены (выполнение пока синхронное без индикации прогресса),
