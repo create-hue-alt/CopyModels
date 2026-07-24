@@ -20,7 +20,7 @@ namespace CopyModels.Plugin
     {
         public Result OnStartup(UIControlledApplication application)
         {
-            if (Environment.GetEnvironmentVariable("COPYMODELS_AUTORUN") != "1")
+            if (Environment.GetEnvironmentVariable(AppDefaults.EnvAutorun) != "1")
                 return Result.Succeeded;
 
             application.Idling += OnIdling;
@@ -36,7 +36,7 @@ namespace CopyModels.Plugin
             uiApp.Idling -= OnIdling;
 
             var app = uiApp.Application;
-            var projectId = Environment.GetEnvironmentVariable("COPYMODELS_PROJECT");
+            var projectId = Environment.GetEnvironmentVariable(AppDefaults.EnvProject);
 
             var logDir = AppPaths.LogDir;
             Directory.CreateDirectory(logDir);
@@ -47,7 +47,7 @@ namespace CopyModels.Plugin
             Action<string> logWarning = m => CopyModelsExecutor.WriteLog(logWriter, "WARNING", m);
             Action<string> logError = m => CopyModelsExecutor.WriteLog(logWriter, "ERROR", m);
 
-            bool debugEnable = Environment.GetEnvironmentVariable("COPYMODELS_DEBUG") == "1";
+            bool debugEnable = Environment.GetEnvironmentVariable(AppDefaults.EnvDebug) == "1";
             Action<string> logDebug = debugEnable
                 ? (Action<string>)(m => CopyModelsExecutor.WriteLog(logWriter, "DEBUG", m))
                 : (m => { });
@@ -64,8 +64,8 @@ namespace CopyModels.Plugin
             var settings = settingsReader.ReadAll();
 
             // Ищем проект по ID
-            var allProjects = settings.ContainsKey("ALL")
-                ? settings["ALL"]
+            var allProjects = settings.ContainsKey(AppDefaults.AllProjectsKey)
+                ? settings[AppDefaults.AllProjectsKey]
                 : new List<ProjectSettings>();
             var task = allProjects.FirstOrDefault(p => p.Project == projectId);
             if (task == null)

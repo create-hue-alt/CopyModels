@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CopyModels.Settings;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -83,7 +84,7 @@ namespace CopyModels.Core.Models
                 var target = SplitTarget(targetRaw).path;
                 var ext = Path.GetExtension(target).ToLower().TrimStart('.');
                 var targetDate = getModelDate(target);
-                var sourceDateMinus = SourceModelDate - 60; // 1 минута допуск, как в Python
+                var sourceDateMinus = SourceModelDate - AppDefaults.ActualityToleranceSeconds;
 
                 if (targetDate == null || targetDate <= sourceDateMinus)
                 {

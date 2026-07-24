@@ -37,7 +37,7 @@ namespace CopyModels.Plugin
             Action<string> logWarning = m => CopyModelsExecutor.WriteLog(logWriter, "WARNING", m);
             Action<string> logError = m => CopyModelsExecutor.WriteLog(logWriter, "ERROR", m);
 
-            bool debugEnable = Environment.GetEnvironmentVariable("COPYMODELS_DEBUG") == "1";
+            bool debugEnable = Environment.GetEnvironmentVariable(AppDefaults.EnvDebug) == "1";
             Action<string> logDebug = debugEnable
                 ? (Action<string>)(m => CopyModelsExecutor.WriteLog(logWriter, "DEBUG", m))
                 : (m => { });
@@ -75,7 +75,7 @@ namespace CopyModels.Plugin
             logInfo($"Found {settings.Count} projects groups");
 
             // Защитная проверка: если в "ALL" ничего нет, значит конфиг пуст или не прочитался
-            if (!settings.ContainsKey("ALL") || settings["ALL"].Count == 0)
+            if (!settings.ContainsKey(AppDefaults.AllProjectsKey) || settings[AppDefaults.AllProjectsKey].Count == 0)
             {
                 logInfo("No tasks found in configuration files.");
                 logWriter.Dispose();
