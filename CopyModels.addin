@@ -11,4 +11,12 @@
 		<Description>Batch copy and export Revit models (RVT, NWC, IFC)</Description>
 		<VisibilityMode>AlwaysVisible</VisibilityMode>
 	</AddIn>
+	<AddIn Type="Application">
+		<Name>CopyModelsApp</Name>
+		<Assembly>C:\Users\GUV\source\repos\CopyModels\CopyModels.Plugin\bin\Debug\CopyModels.Plugin.dll</Assembly>
+		<AddInId>B2C3D4E5-F6A7-8901-BCDE-F12345678901</AddInId>
+		<FullClassName>CopyModels.Plugin.CopyModelsApplication</FullClassName>
+		<VendorId>ATPTLP</VendorId>
+		<VendorDescription>ATP TLP BIM Tools</VendorDescription>
+	</AddIn>
 </RevitAddIns>

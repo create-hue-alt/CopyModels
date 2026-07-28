@@ -7,6 +7,9 @@ using System.Windows.Media;
 
 namespace CopyModels.UI.ViewModels
 {
+    /// <summary>
+    /// Одна статусная метка модели в UI (текст + цвет) - например "rvt_not_actual".
+    /// </summary>
     public class BadgeItem
     {
         public string Text { get; }

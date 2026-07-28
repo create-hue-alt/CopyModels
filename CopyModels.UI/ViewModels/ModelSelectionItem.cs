@@ -7,6 +7,10 @@ using System.Windows.Media;
 
 namespace CopyModels.UI.ViewModels
 {
+    /// <summary>
+    /// Обертка над ModelSetting для биндинга в ModelSelectionWindow -
+    /// добавляет IsSelected (чекбоксы) и Badges (статусные метки) поверх данных модели.
+    /// </summary>
     public class ModelSelectionItem : INotifyPropertyChanged
     {
         public ModelSetting Model {  get; }

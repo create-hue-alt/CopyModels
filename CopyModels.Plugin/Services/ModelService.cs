@@ -1,6 +1,7 @@
 ﻿using Autodesk.Revit.ApplicationServices;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.IFC;
+using CopyModels.Settings;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -8,6 +9,10 @@ using System.Linq;
 
 namespace CopyModels.Plugin.Services
 {
+    /// <summary>
+    /// Открытие, экспорт и сохранение моделей через RevitAPI
+    /// (RVT/NWC/IFC, purge, worksets, transmit)
+    /// </summary>
     internal class ModelService
     {
         private readonly Application _app;
@@ -15,19 +20,22 @@ namespace CopyModels.Plugin.Services
         private readonly Action<string> _logInfo;
         private readonly Action<string> _logWarning;
         private readonly Action<string> _logError;
+        private readonly Action<string> _logDebug;
 
         public ModelService(
             Application app,
             FileService fileService,
             Action<string> logInfo = null,
             Action<string> logWarning = null,
-            Action<string> logError = null)
+            Action<string> logError = null,
+            Action<string> logDebug = null)
         {
             _app = app ?? throw new ArgumentNullException(nameof(app));
             _fileService = fileService ?? throw new ArgumentNullException(nameof(fileService));
             _logInfo = logInfo ?? (_ => { });
             _logWarning = logWarning ?? (_ => { });
             _logError = logError ?? (_ => { });
+            _logDebug = logDebug ?? (_ => { });
         }
 
         // 
@@ -99,12 +107,13 @@ namespace CopyModels.Plugin.Services
         // Закрытие / сброс прав
         // 
 
-        public void RelinquishAndClose(Document doc)
+        public void RelinquishAndClose(Document doc, bool skipRelinquish =false)
         {
             if (doc == null) return;
             try
             {
-                RelinquishOwnership(doc);
+                if (!skipRelinquish)
+                    RelinquishOwnership(doc);
                 doc.Close(false);
                 _logInfo("Document closed");
 
@@ -141,6 +150,8 @@ namespace CopyModels.Plugin.Services
         {
             try
             {
+                _fileService.EnsureDirectory(targetPath);
+
                 if (archiveFolder != null)
                     _fileService.ArchiveModel(targetPath, archiveFolder);
                 if (File.Exists(targetPath))
@@ -183,7 +194,7 @@ namespace CopyModels.Plugin.Services
             Document doc,
             string targetPath,
             string archiveFolder = null,
-            string viewName = "Navisworks",
+            string viewName = AppDefaults.NavisworksViewName,
             bool nwcAllProperties = true,
             bool nwcRoom = false,
             bool nwcDivideIntoLevels = true,
@@ -201,10 +212,10 @@ namespace CopyModels.Plugin.Services
 
             // Найти вид
             var view = GetViewByName(doc, viewName);
-            if (view == null && viewName.Equals("Navisworks", StringComparison.OrdinalIgnoreCase))
+            if (view == null && viewName.Equals(AppDefaults.NavisworksViewName, StringComparison.OrdinalIgnoreCase))
             {
                 _logWarning($"No Navisworks view found in {doc.Title}, creating new.");
-                view = Create3DView(doc, "Navisworks");
+                view = Create3DView(doc, AppDefaults.NavisworksViewName);
             }
             if (view == null)
             {
@@ -370,7 +381,7 @@ namespace CopyModels.Plugin.Services
                             bool transmit = true,
                             bool relativeLinks = false)
         {
-            if (FileService.IsRevitServer(path))
+            if (AppDefaults.IsRevitServer(path))
             {
                 _logInfo("Transmit not required for Revit Server");
                 return true;
@@ -594,14 +605,17 @@ namespace CopyModels.Plugin.Services
 
             try
             {
-                var info = BasicFileInfo.Extract(pathString);
-                if (!info.IsWorkshared || !info.IsCentral) return;
+                if (!AppDefaults.IsRevitServer(pathString))
+                {
+                    var info = BasicFileInfo.Extract(pathString);
+                    if (!info.IsWorkshared || !info.IsCentral) return;
+                }
 
                 var worksets = WorksharingUtils.GetUserWorksetInfo(modelPath);
                 var config = new WorksetConfiguration(WorksetConfigurationOption.CloseAllWorksets);
                 var toOpen = new List<WorksetId>();
 
-                foreach ( var ws in worksets )
+                foreach (var ws in worksets)
                 {
                     var shouldClose = closeWorksetMark
                         .Any(m => ws.Name.IndexOf(m, StringComparison.OrdinalIgnoreCase) >= 0);
@@ -612,7 +626,7 @@ namespace CopyModels.Plugin.Services
                     _logInfo($"Workset '{ws.Name}' : {(shouldClose ? "Close" : "Open")}");
                 }
 
-                if (toOpen.Count > 0) 
+                if (toOpen.Count > 0)
                     config.Open(toOpen);
 
                 options.SetOpenWorksetsConfiguration(config);

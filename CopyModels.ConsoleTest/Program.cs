@@ -42,12 +42,12 @@ namespace CopyModels.ConsoleTest
 
                 if (allSettings != null && allSettings.Count > 0)
                 {
-                    Check(allSettings.ContainsKey("ALL"),
+                    Check(allSettings.ContainsKey(AppDefaults.AllProjectsKey),
                         "Сгруппированный список 'ALL' успешно сформирован", "Ключ 'ALL' отсутствует в словаре");
 
-                    if (allSettings.ContainsKey("ALL"))
+                    if (allSettings.ContainsKey(AppDefaults.AllProjectsKey))
                     {
-                        var allTasks = allSettings["ALL"];
+                        var allTasks = allSettings[AppDefaults.AllProjectsKey];
 
                         Check(allTasks.Count > 0,
                             $"В группе 'ALL' найдено {allTasks.Count} заданий", "Группа 'ALL' пуста");
@@ -74,11 +74,11 @@ namespace CopyModels.ConsoleTest
                 Console.ResetColor();
 
                 // --- СТАТИСТИКА ---
-                if (allSettings != null && allSettings.ContainsKey("ALL"))
+                if (allSettings != null && allSettings.ContainsKey(AppDefaults.AllProjectsKey))
                 {
                     Console.WriteLine("📊 СТАТИСТИКА:");
-                    Console.WriteLine($"   Всего проектов: {allSettings.Keys.Count(k => k != "ALL")}");
-                    Console.WriteLine($"   Всего уникальных заданий: {allSettings["ALL"].Count}");
+                    Console.WriteLine($"   Всего проектов: {allSettings.Keys.Count(k => k != AppDefaults.AllProjectsKey)}");
+                    Console.WriteLine($"   Всего уникальных заданий: {allSettings[AppDefaults.AllProjectsKey].Count}");
                 }
 
                 // --- REVIT SERVER ---

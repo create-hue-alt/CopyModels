@@ -37,7 +37,7 @@ namespace CopyModels.Settings
             if (!Directory.Exists(_settingsFolder))
             {
                 return new Dictionary<string, List<ProjectSettings>>() 
-                { ["ALL"] = new List<ProjectSettings>() };
+                { [AppDefaults.AllProjectsKey] = new List<ProjectSettings>() };
             }
 
             // Забираем все json файлы из папки 
@@ -54,7 +54,7 @@ namespace CopyModels.Settings
         {
             var result = new Dictionary<string, List<ProjectSettings>>()
             {
-                ["ALL"] = new List<ProjectSettings>()
+                [AppDefaults.AllProjectsKey] = new List<ProjectSettings>()
             };
 
             foreach (var file in files)
@@ -82,7 +82,7 @@ namespace CopyModels.Settings
                         var ps = new ProjectSettings(project, taskName, taskSettings);
 
                         result[project].Add(ps);
-                        result["ALL"].Add(ps);
+                        result[AppDefaults.AllProjectsKey].Add(ps);
                     }
                 }
             }

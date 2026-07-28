@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CopyModels.Settings;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -16,15 +17,18 @@ namespace CopyModels.Plugin.Services
         private readonly Action<string> _logInfo;
         private readonly Action<string> _logWarning;
         private readonly Action<string> _logError;
+        private readonly Action<string> _logDebug;
 
         public FileService(
             Action<string> logInfo = null,
             Action<string> logWarning = null,
-            Action<string> logError = null)
+            Action<string> logError = null,
+            Action<string> logDebug = null)
         {
             _logInfo = logInfo ?? (_ => { });
             _logWarning = logWarning ?? (_ => { });
             _logError = logError ?? (_ => { });
+            _logDebug = logDebug ?? (_ => { });
         }
 
         //
@@ -38,7 +42,7 @@ namespace CopyModels.Plugin.Services
         public double? GetModelDate(string path)
         {
             if (string.IsNullOrEmpty(path)) return null;
-            if (IsRevitServer(path)) return null;
+            if (AppDefaults.IsRevitServer(path)) return null;
             if (!File.Exists(path)) return null;
 
             var fileInfo = new FileInfo(path);
@@ -101,7 +105,7 @@ namespace CopyModels.Plugin.Services
         /// </summary>
         public string ArchiveModel(string modelPath, string archiveTemplate)
         {
-            if (IsRevitServer(modelPath))
+            if (AppDefaults.IsRevitServer(modelPath))
             {
                 _logInfo($"Archiving not supported for Revit Server: {modelPath}");
                 return null;
@@ -211,7 +215,7 @@ namespace CopyModels.Plugin.Services
         /// </summary>
         public List<string> ReadModels(string pathPattern, IEnumerable<string> exceptions = null)
         {
-            if (IsRevitServer(pathPattern))
+            if (AppDefaults.IsRevitServer(pathPattern))
                 return new List<string>();  // см. RevitServerService.ReadRevitServerModels
 
             var folder = Path.GetDirectoryName(pathPattern) ?? pathPattern;
@@ -238,6 +242,7 @@ namespace CopyModels.Plugin.Services
             
             // Проверяем текущие подключение
             var currentPath = GetConnectionPath(driverLetterNorm);
+            _logDebug($"Current connection for {driverLetterNorm}: {currentPath ??  "(none)"}");
             if (currentPath == networkPath)
             {
                 _logInfo($"Drive {driverLetterNorm} already mapped correctly.");
@@ -246,6 +251,7 @@ namespace CopyModels.Plugin.Services
                         
             if (Directory.Exists(driverLetterNorm + "\\"))
             {
+                _logDebug($"Disconnecting existing mapping on {driverLetter} before remap");
                 var disconnectResult = WNetCancelConnection2(driverLetter, 1, true);
                 if (disconnectResult != 0)
                 {
@@ -280,11 +286,7 @@ namespace CopyModels.Plugin.Services
 
         //
         // Утилиты
-        //
-
-        /// <summary>Проверяет, является ли путь адресом Revit Server (начинается с RSN).</summary>
-        public static bool IsRevitServer(string path) =>
-            path != null && path.StartsWith("RSN", StringComparison.OrdinalIgnoreCase);
+        //              
         
         /// <summary>Создаёт директорию для файла, если она не существует.</summary>
         public void EnsureDirectory(string filePath)

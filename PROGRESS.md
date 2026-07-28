@@ -14,15 +14,23 @@ CopyModels.sln
 │   │   ├── ProjectSettings.cs      — поля одного задания + парсинг JSON ✅
 │   │   └── ModelSetting.cs         — поля одной модели + логика дат ✅
 │   └── Settings/
-│       └── SettingsReader.cs       — читает JSON файлы, создаёт ProjectSettings ✅
+│       ├── SettingsReader.cs       — читает JSON файлы, создаёт ProjectSettings ✅
+│       ├── AppPaths.cs             — пути к конфигам/логам (Documents\000_CopyModels) ✅
+│       └── AppDefaults.cs          — общие константы (env-переменные, "ALL", допуски) ✅
 │
 ├── CopyModels.Plugin               — требует RevitAPI.dll
 │   ├── Services/
-│   │   ├── FileService.cs          — копирование файлов, архив, маппинг диска (WinAPI) ✅
-│   │   ├── RevitServerService.cs   — HTTP запросы к Revit Server (RSN) ✅
-│   │   ├── ModelService.cs         — открытие / экспорт / сохранение моделей Revit ✅
-│   │   └── EventService.cs         — подписка на события, автозакрытие диалогов ✅
-│   └── CopyModelsCommand.cs        — IExternalCommand, точка входа ⏳
+│   │   ├── FileService.cs              — копирование файлов, архив, маппинг диска (WinAPI) ✅
+│   │   ├── RevitServerService.cs       — HTTP запросы к Revit Server (RSN) ✅
+│   │   ├── ModelService.cs             — открытие / экспорт / сохранение моделей Revit ✅
+│   │   ├── EventService.cs             — подписка на события, автозакрытие диалогов ✅
+│   │   └── DialogWatchdogService.cs    — UI Automation вотчдог для зависающего
+│   │                                     системного диалога NWC-экспортера ✅
+│   ├── CopyModelsExecutor.cs       — общий движок обработки моделей ✅
+│   ├── CopyModelsCommand.cs        — IExternalCommand, интерактивная точка входа,
+│   │                                  показывает окна выбора из CopyModels.UI ✅
+│   └── CopyModelsApplication.cs    — IExternalApplication, headless-автозапуск
+│                                      (Task Scheduler, без диалогов) ✅
 │
 ├── CopyModels.ConsoleTest          — тестирование Core логики (без Revit) ✅
 │   ├── Program.cs
@@ -32,10 +40,20 @@ CopyModels.sln
 │       ├── Structure.json
 │       └── RealProject.json
 │
-└── CopyModels.UI                   — WPF интерфейс (этап 2+3) ⏳
-    ├── MainWindow.xaml
-    └── ViewModels/
-        └── MainViewModel.cs
+└── CopyModels.UI                   — WPF интерфейс (этап 2+3) ⏳ в основном готово
+    ├── Commands/
+    │   └── RelayCommand.cs             ✅
+    ├── ViewModels/
+    │   ├── ProjectSelectionViewModel.cs ✅ подключена к CopyModelsCommand
+    │   ├── ModelSelectionViewModel.cs   ✅ подключена к CopyModelsCommand
+    │   ├── ModelSelectionItem.cs        ✅ вспомогательная модель для чекбоксов
+    │   ├── BadgeItem.cs                 ✅ вспомогательная модель для UI-бейджей
+    │   ├── ProgressViewModel.cs         ⏳ пустая заглушка, не подключена
+    │   └── ExportOptionsViewModel.cs    ⏳ пустая заглушка, окна нет вообще
+    └── Windows/
+        ├── ProjectSelectionWindow.xaml  ✅ подключено к CopyModelsCommand
+        ├── ModelSelectionWindow.xaml    ✅ подключено к CopyModelsCommand
+        └── ProgressWindow.xaml          ⏳ файл есть, нигде не используется
 ```
 
 ### Правило разделения Core / Plugin
@@ -60,21 +78,55 @@ CopyModels.sln
 - [x] EventService.cs
 - [x] CopyModelsCommand.cs
 
-### Этап 2+3 ⏳ В работе
+### Этап 2+3 ⏳ В основном готово
 - [x] RelayCommand.cs
-- [ ] SelectionViewModel.cs
-- [ ] ExportOptionsViewModel.cs
-- [ ] ProgressViewModel.cs
-- [ ] SelectionWindow.xaml
-- [ ] ExportOptionsWindow.xaml
-- [ ] ProgressWindow.xaml
+- [x] ProjectSelectionViewModel.cs + ProjectSelectionWindow.xaml — выбор проекта
+- [x] ModelSelectionViewModel.cs + ModelSelectionWindow.xaml — выбор моделей (чекбоксы, Check/Uncheck/Toggle All)
+- [ ] ProgressViewModel.cs + ProgressWindow.xaml — заглушки, не подключены (выполнение сейчас синхронное, без индикации)
+- [ ] ExportOptionsViewModel.cs + ExportOptionsWindow.xaml — окна нет, ViewModel пустая
 
-### Этап 4 ⏸
-- [ ] Windows Task Scheduler интеграция
+### Этап 4 ✅ Завершён — headless autorun + Task Scheduler
+- [x] CopyModelsExecutor.cs — движок вынесен из CopyModelsCommand, общий для Command/Application
+- [x] CopyModelsApplication.cs — IExternalApplication, читает COPYMODELS_AUTORUN/PROJECT/DEBUG
+- [x] Retry первой модели при сбое NWC-экспорта (баг холодного старта Revit-сессии)
+- [x] Toggleable debug-логи (COPYMODELS_DEBUG) + понижение шумных логов
+- [x] DialogWatchdogService.cs — UI Automation вотчдог для диалога
+      "No suitable geometry found" (поиск по AutomationId, не по локализованному тексту)
+- [x] AppDefaults.cs — вынесены магические строки/числа (env-переменные, "ALL", допуски)
+- [x] Bat-файл + Windows Task Scheduler — настроено и протестировано реальным прогоном
 
 ### Этап 5 ⏸
 - [ ] SettingsRepository (PostgreSQL)
 - [ ] История запусков
+
+### Этап 6 ⏸ Если дойдём
+- [ ] Переход с самодельного логирования (Action<string> logInfo/logWarning/logError/logDebug)
+      на Serilog или NLog
+- [ ] Sinks (файл/консоль/email при ERROR), ротация и retention логов
+- [ ] Структурированные логи вместо plain text
+
+### Бэклог — не срочно, вернёмся позже
+- [ ] `ModelSelectionItem.cs` — exceed-модели (кандидаты на удаление по `Delete Missed`)
+      сейчас показываются с тем же бейджем "Actual", что и обычные актуальные модели
+      (`StatusFlags` не заполняется для `IsExceed`-моделей). Нужен отдельный явный
+      бейдж ("To delete"), чтобы не удалить модель по невнимательности
+- [ ] `ModelSelectionWindow`/`ModelSelectionViewModel` — множественный выбор моделей
+      через Shift (выделить диапазон кликом с зажатым Shift), сейчас можно отмечать
+      только по одной модели за клик (не считая Check/Uncheck/Toggle All)
+- [ ] Чекбокс "Debug log" в `ProjectSelectionWindow` (или отдельно) — переключатель
+      debug-логирования внутри интерактивного режима, без переменной окружения
+      `COPYMODELS_DEBUG` и перезапуска Revit. Требует доработки WPF-окна и
+      прокидывания флага в `CopyModelsExecutor`/`CopyModelsCommand`
+- [ ] Нормальное WPF-окно с итогами вместо `TaskDialog` в `ShowResultReport()` —
+      per-model успехи/ошибки (`AddResult`/`AddFailure`) уже собираются и показываются
+      через `TaskDialog.Show` в конце `CopyModelsCommand.Execute`, но это plain-text
+      отчёт, не полноценное окно (какие модели экспортировались, куда, успех/ошибка).
+      Отдельно всё ещё остаются полностью немые обрывы без всякого сообщения —
+      `allModels.Count == 0` (`CopyModelsCommand.cs:110-111`) и необработанные
+      исключения вне `RunTask` (`CopyModelsExecutor.RunTask` ловит их только логом
+      `Task error [...]`, без UI)
+- [ ] Добавить подтверждение выбора задачи чрез ЛКМ в Первом окне. Лгика работы: совместно
+      с клавишей "ОК"
 
 ---
 
@@ -84,8 +136,12 @@ FileService        — локальные файлы (P:, C:)
 RevitServerService — Revit Server (RSN://)
 ModelService       — открытие / экспорт / сохранение моделей Revit
 EventService       — подписка на события Revit, автозакрытие диалогов
+DialogWatchdogService — сторонний Win32/UI Automation вотчдог для диалогов,
+                        которые EventService не ловит (не Revit'овские MessageBox)
 
-
+CopyModelsExecutor  — общий движок: обход моделей, retry первой модели, вызов сервисов
+CopyModelsCommand   — интерактивная точка входа (кнопка в ленте), показывает окна CopyModels.UI
+CopyModelsApplication — headless точка входа (Task Scheduler, без диалогов)
 
 ---
 
@@ -101,6 +157,30 @@ EventService       — подписка на события Revit, автоза�
 - Архитектурное решение: убрали дисциплины, перешли на структуру Проект → Задача
 - SettingsReader.cs переписан под новую структуру
 - Следующий шаг: SelectionViewModel + SelectionWindow
+
+### Сессия 13 — Headless autorun (ветка feature/headless-autorun)
+- CopyModelsExecutor вынесен из CopyModelsCommand — общий движок для
+  интерактивного и headless режимов
+- CopyModelsApplication (IExternalApplication) — точка входа для автозапуска
+  без диалогов, читает COPYMODELS_AUTORUN/COPYMODELS_PROJECT/COPYMODELS_DEBUG
+- Найден и починен баг холодного старта: первый вызов NWC-экспорта иногда падает
+  с системным диалогом "No suitable geometry found" — исправлено полным повторным
+  проходом (open+export+close) для первой модели
+- DialogWatchdogService — UI Automation вотчдог, автоматически закрывает
+  этот диалог (поиск кнопки по AutomationId, устойчиво к локализации Windows)
+- Магические строки/числа вынесены в AppDefaults; устранено дублирование
+  проверки IsRevitServer между Core и Plugin
+- Bat-файл + Windows Task Scheduler настроены и протестированы полным
+  автономным прогоном (LogonType=InteractiveToken — обязательно для UI Automation)
+- Сверка документации (CLAUDE.md/PROGRESS.md/README.md) с реальным кодом:
+  обнаружено, что CopyModels.UI на самом деле значительно дальше, чем считалось —
+  ProjectSelectionWindow и ModelSelectionWindow полностью рабочие и подключены
+  к CopyModelsCommand; пустыми заглушками остаются только ProgressWindow
+  (файлы есть, не подключены) и ExportOptionsWindow (нет файла вообще)
+- Следующий шаг: подключить ProgressWindow для индикации выполнения задания;
+  отдельно на заметку — подпись DLL сертификатом, чтобы не подтверждать
+  "Always Load" после каждой пересборки
+
 ---
 
 ## Полезные ссылки
