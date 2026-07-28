@@ -28,20 +28,18 @@ namespace CopyModels.Core.Models
         public List<string> TargetPaths { get; }
 
         // Опция копирования
-        public bool SelectableCopy { get; }
         public bool KeepStructure { get; }
         public List<string> CopyExceptions { get; }
         public List<string> PathExceptions { get; }
+        public List<string> SelectedModels { get; }
         public bool DeleteMissed { get; }
 
         // Опция открытия / очистки
         public bool Purge { get; }
-        public List<string> FullOpenMask { get; }
         public List<string> CloseWorksetsMask { get; }
 
         // Архив
         public string BackupFolder { get; }
-        public bool CleanBackup { get; }
 
         // Transmit
         public bool? Transmit { get; }
@@ -137,21 +135,19 @@ namespace CopyModels.Core.Models
             }
 
             // Опция копирования
-            SelectableCopy = settings["Selectable Copy"]?.Value<bool>() ?? true;
             KeepStructure = settings["Keep Structure"]?.Value<bool>() ?? true;
             DeleteMissed = settings["Delete Missed"]?.Value<bool>() ?? false;
 
             CopyExceptions = ParseStringList(settings["Copy Exceptions"]);
             PathExceptions = ParseStringList(settings["Path Exceptions"]);
+            SelectedModels = ParseStringList(settings["Selected Models"]);
 
             // Очистка /открытие
             Purge = settings["Purge"]?.Value<bool>() ?? false;
-            FullOpenMask = ParseStringList(settings["Full Open Mask"]);
             CloseWorksetsMask = ParseStringList(settings["Close Workset Mask"]);
 
             // Архив
             BackupFolder = settings["BackUp Folder"]?.Value<string>();
-            CleanBackup = settings["Clean BackUp"]?.Value<bool>() ?? true;
 
             // Transmit
             Transmit = settings["Transmit"]?.Value<bool>();

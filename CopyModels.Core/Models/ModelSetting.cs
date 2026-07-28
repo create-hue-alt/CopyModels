@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CopyModels.Settings;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -83,7 +84,7 @@ namespace CopyModels.Core.Models
                 var target = SplitTarget(targetRaw).path;
                 var ext = Path.GetExtension(target).ToLower().TrimStart('.');
                 var targetDate = getModelDate(target);
-                var sourceDateMinus = SourceModelDate - 60; // 1 минута допуск, как в Python
+                var sourceDateMinus = SourceModelDate - AppDefaults.ActualityToleranceSeconds;
 
                 if (targetDate == null || targetDate <= sourceDateMinus)
                 {
@@ -113,8 +114,8 @@ namespace CopyModels.Core.Models
             if (IsExceed) return false;
 
             var srcExt = Path.GetExtension(SourcePath).ToUpper();
-            var srcIsRsn = SourcePath.StartsWith("RSN", StringComparison.OrdinalIgnoreCase);
-            var hasRsnTgt = Targets.Any(t => SplitTarget(t).path.StartsWith("RSN", StringComparison.OrdinalIgnoreCase));
+            var srcIsRsn = AppDefaults.IsRevitServer(SourcePath);
+            var hasRsnTgt = Targets.Any(t => AppDefaults.IsRevitServer(SplitTarget(t).path));
             var extMismatch = Targets.Any(t =>
                 !Path.GetExtension(SplitTarget(t).path).ToUpper().Equals(srcExt, StringComparison.OrdinalIgnoreCase));
 
@@ -131,13 +132,6 @@ namespace CopyModels.Core.Models
         /// </summary>
         public static (string path, string view) SplitTarget(string raw)
         {
-            /*
-            var idx= raw.IndexOf('>');
-            return idx < 0
-                ? (raw, "Navisworks")
-                : (raw.Substring(0, idx), raw.Substring(idx + 1));
-            */
-
             if (string.IsNullOrEmpty(raw)) return (null, null);
 
             var parts = raw.Split(new[] {'>'}, StringSplitOptions.None );

@@ -75,7 +75,7 @@ namespace CopyModels.UI.ViewModels
                 StatusMessage = "Loading settings...";
 
                 // Читаем JSON (используем SettingReader из Core)
-                var allSettings = new SettingsReader(folderPath).ReadAll()["ALL"];
+                var allSettings = new SettingsReader(folderPath).ReadAll()[AppDefaults.AllProjectsKey];
                 AllSettings = new ObservableCollection<ProjectSettings>(allSettings);
 
                 StatusMessage = $"Loaded {AllSettings.Count} project groups";

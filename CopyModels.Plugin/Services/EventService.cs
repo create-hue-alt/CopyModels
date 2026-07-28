@@ -17,6 +17,7 @@ namespace CopyModels.Plugin.Services
         private readonly UIApplication _appDialog;
         private readonly Action<string> _logInfo;
         private readonly Action<string> _logWarning;
+        private readonly Action<string> _logDebug;
 
         private bool _subscribed;
 
@@ -24,16 +25,18 @@ namespace CopyModels.Plugin.Services
             Application appFailure,
             UIApplication appDialog,
             Action<string> logInfo = null,
-            Action<string> logWarning = null)
+            Action<string> logWarning = null,
+            Action<string> logDebug = null)
         {
             _appFailure = appFailure ?? throw new ArgumentNullException(nameof(appFailure));
             _appDialog = appDialog ?? throw new ArgumentNullException(nameof(appDialog));
             _logInfo = logInfo ?? (_ => { });
             _logWarning = logWarning ?? (_ => { });
+            _logDebug = logDebug ?? (_ => { });
         }
 
         // 
-        // Подписка/ отписка
+        // Подписка/ отпискаS
         // 
 
         public void Subscribe()
@@ -59,8 +62,6 @@ namespace CopyModels.Plugin.Services
 
         private void OnFailureProcessing(object sender, FailuresProcessingEventArgs e)
         {
-            _logInfo($"FailuresProcessing in {sender}");
-
             var accessor = e.GetFailuresAccessor();
             var messages = accessor.GetFailureMessages();
 
