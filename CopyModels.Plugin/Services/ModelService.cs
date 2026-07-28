@@ -107,12 +107,13 @@ namespace CopyModels.Plugin.Services
         // Закрытие / сброс прав
         // 
 
-        public void RelinquishAndClose(Document doc)
+        public void RelinquishAndClose(Document doc, bool skipRelinquish =false)
         {
             if (doc == null) return;
             try
             {
-                RelinquishOwnership(doc);
+                if (!skipRelinquish)
+                    RelinquishOwnership(doc);
                 doc.Close(false);
                 _logInfo("Document closed");
 
@@ -149,6 +150,8 @@ namespace CopyModels.Plugin.Services
         {
             try
             {
+                _fileService.EnsureDirectory(targetPath);
+
                 if (archiveFolder != null)
                     _fileService.ArchiveModel(targetPath, archiveFolder);
                 if (File.Exists(targetPath))
@@ -602,14 +605,17 @@ namespace CopyModels.Plugin.Services
 
             try
             {
-                var info = BasicFileInfo.Extract(pathString);
-                if (!info.IsWorkshared || !info.IsCentral) return;
+                if (!AppDefaults.IsRevitServer(pathString))
+                {
+                    var info = BasicFileInfo.Extract(pathString);
+                    if (!info.IsWorkshared || !info.IsCentral) return;
+                }
 
                 var worksets = WorksharingUtils.GetUserWorksetInfo(modelPath);
                 var config = new WorksetConfiguration(WorksetConfigurationOption.CloseAllWorksets);
                 var toOpen = new List<WorksetId>();
 
-                foreach ( var ws in worksets )
+                foreach (var ws in worksets)
                 {
                     var shouldClose = closeWorksetMark
                         .Any(m => ws.Name.IndexOf(m, StringComparison.OrdinalIgnoreCase) >= 0);
@@ -620,7 +626,7 @@ namespace CopyModels.Plugin.Services
                     _logInfo($"Workset '{ws.Name}' : {(shouldClose ? "Close" : "Open")}");
                 }
 
-                if (toOpen.Count > 0) 
+                if (toOpen.Count > 0)
                     config.Open(toOpen);
 
                 options.SetOpenWorksetsConfiguration(config);

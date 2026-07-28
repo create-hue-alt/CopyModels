@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Net.Http;
 
 namespace CopyModels.Plugin.Services
@@ -111,7 +112,7 @@ namespace CopyModels.Plugin.Services
                     if (!response.IsSuccessStatusCode)
                         throw new Exception($"HTTP {response.StatusCode}");
                 }
-                
+
                 var srcDate = GetModelDate(sourcePath);
                 var tgtDate = GetModelDate(targetPath);
 
@@ -131,7 +132,7 @@ namespace CopyModels.Plugin.Services
         // 
         // Внутренние методы
         // 
-                
+
         private List<string> RevitServerContent(string baseUrl, string rsn, string folder)
         {
             var fileList = new List<string>();
@@ -150,7 +151,7 @@ namespace CopyModels.Plugin.Services
 
                     var json = JObject.Parse(response.Content.ReadAsStringAsync().Result);
 
-                    foreach (var file  in json["Models"])
+                    foreach (var file in json["Models"])
                     {
                         var link = folder == "|"
                             ? "/" + file["Name"].Value<string>()
@@ -172,7 +173,7 @@ namespace CopyModels.Plugin.Services
             {
                 _logError($"RevitServer Content error for {url}: {ex.Message}");
             }
-            
+
             return fileList;
         }
 
@@ -193,9 +194,14 @@ namespace CopyModels.Plugin.Services
 
                     var json = JObject.Parse(response.Content.ReadAsStringAsync().Result);
 
-                    var raw = json["DateModified"].Value<string>()
-                        .Replace("/Date(", "").Replace(")/", "");
-                    return double.Parse(raw) / 1000.0;
+                    var raw = json["DateModified"].Value<string>();
+                    var dt = DateTime.ParseExact(
+                        raw,
+                        "MM/dd/yyyy HH:mm:ss",
+                        CultureInfo.InvariantCulture,
+                        DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal);
+
+                    return new DateTimeOffset(dt).ToUnixTimeSeconds();
                 }
             }
             catch (Exception ex)

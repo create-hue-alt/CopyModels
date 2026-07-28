@@ -127,6 +127,8 @@ namespace CopyModels.Plugin
 
             // Выполнение задания
             eventService.Subscribe();
+            var watchdog = new DialogWatchdogService(logWarning, logDebug);
+            watchdog.Start();
             try
             {
                 logInfo($"Starting task: {selectedProject.DisplayName}");
@@ -135,6 +137,7 @@ namespace CopyModels.Plugin
             finally
             {
                 eventService.Unsubscribe();
+                watchdog.Stop();
                 logWriter.Dispose();
             }
 

@@ -54,7 +54,7 @@ namespace CopyModels.Plugin
             // Получаем источники
             List<string> sources;
             if (AppDefaults.IsRevitServer(task.SourcePath))
-                sources = _rsnService.ReadRevitServerModels(Path.GetDirectoryName(task.SourcePath));
+                sources = _rsnService.ReadRevitServerModels(PathUtiles.GetRsnDirectoryName(task.SourcePath));
             else
                 sources = _fileService.ReadModels(task.SourcePath, task.PathExceptions);
 
@@ -63,7 +63,7 @@ namespace CopyModels.Plugin
             foreach (var tgt in task.TargetPaths)
             {
                 var tgtList = AppDefaults.IsRevitServer(tgt)
-                    ? _rsnService.ReadRevitServerModels(Path.GetDirectoryName(tgt))
+                    ? _rsnService.ReadRevitServerModels(PathUtiles.GetRsnDirectoryName(tgt))
                     : _fileService.ReadModels(tgt, task.PathExceptions);
                 foreach (var m in tgtList) exceedModels.Add(m);
             }
@@ -71,7 +71,9 @@ namespace CopyModels.Plugin
             var getDate = GetModelDateFunc();
 
             var result = new List<ModelSetting>();
-            var srcDir = Path.GetDirectoryName(task.SourcePath);
+            var srcDir = AppDefaults.IsRevitServer(task.SourcePath)
+                ? PathUtiles.GetRsnDirectoryName(task.SourcePath)
+                : Path.GetDirectoryName(task.SourcePath);
 
             foreach (var src in sources)
             {
@@ -120,9 +122,9 @@ namespace CopyModels.Plugin
             {
                 for (int i = 0; i < models.Count; i++)
                 {
-                    bool ok = ProcessModel(models[i], task);
+                    bool ok = ProcessModel(models[i], task, reportFailure: i != 0);
                     _logDebug($"ProcessModel result [{i}] {Path.GetFileNameWithoutExtension(models[i].SourcePath)}: {ok}");
-                    if(!ok && i == 0)
+                    if (!ok && i == 0)
                     {
                         _logWarning("First model failed, retrying full open/export cycle once");
                         bool retryOk = ProcessModel(models[i], task);
@@ -140,11 +142,12 @@ namespace CopyModels.Plugin
         // Обработка одной модели
         // 
 
-        private bool ProcessModel(ModelSetting model, ProjectSettings task)
+        private bool ProcessModel(ModelSetting model, ProjectSettings task, bool reportFailure = true)
         {
             bool success = true;
 
             var modelName = Path.GetFileNameWithoutExtension(model.SourcePath);
+            _logInfo(new string('=',60));
             _logInfo($"Processing: {modelName}");
 
             // Exceed (удаление)
@@ -172,6 +175,7 @@ namespace CopyModels.Plugin
             if (task.Purge || model.IsOpenRequired())
             {
                 Document doc = null;
+                bool wasDetached = false;
 
                 try
                 {
@@ -182,8 +186,11 @@ namespace CopyModels.Plugin
                     if (doc == null)
                     {
                         _logError($"Could not open: {model.SourcePath}");
+                        if (reportFailure) AddFailure(task, modelName, "Failed to open the source model");
                         return false;
                     }
+
+                    wasDetached = doc.IsDetached;
 
                     // Убедиться что есть NavisWorks вид
                     var defaultView = AppDefaults.NavisworksViewName;
@@ -216,12 +223,11 @@ namespace CopyModels.Plugin
                                 task.NwcRoom,
                                 task.NwcDivideIntoLevels,
                                 task.NwcLinkedFiles,
-                                task.IfcSettings);                            
+                                task.IfcSettings);
                         }
 
                         if (ok)
                         {
-                            _logInfo($"Saved: {targetPath}");
                             AddResult(task,
                                 modelName,
                                 tgtExt == ".RVT"
@@ -243,6 +249,7 @@ namespace CopyModels.Plugin
                         {
                             _logError($"Export failed: {targetPath}");
                             success = false;
+                            if (reportFailure) AddFailure(task, modelName, $"Export/save failed: {targetPath}");
                         }
                     }
 
@@ -251,11 +258,12 @@ namespace CopyModels.Plugin
                 {
                     _logError($"Unexpected error processing {modelName} : {ex.Message}\n{ex.StackTrace}");
                     success = false;
+                    if (reportFailure) AddFailure(task, modelName, $"Unexpected error: {ex.Message}");
                 }
                 finally
                 {
                     if (doc != null)
-                        _modelService.RelinquishAndClose(doc);
+                        _modelService.RelinquishAndClose(doc,wasDetached);
                 }
                 return success;
 
@@ -288,6 +296,7 @@ namespace CopyModels.Plugin
                     else
                     {
                         _logError($"Copy failed: {model.SourcePath} -> {targetPath}");
+                        if (reportFailure) AddFailure(task, modelName, $"Copy failed: {targetPath}");
                     }
                 }
 
@@ -312,7 +321,11 @@ namespace CopyModels.Plugin
                 string targetPath;
                 if (task.KeepStructure)
                 {
-                    var rel = PathUtiles.GetRelativePath(srcDir, Path.GetDirectoryName(srcPath));
+                    var rel = PathUtiles.GetRelativePath(
+                        srcDir,
+                        AppDefaults.IsRevitServer(srcPath)
+                            ? PathUtiles.GetRsnDirectoryName(srcPath)
+                            : Path.GetDirectoryName(srcPath));
                     targetPath = Path.Combine(tgtDir, rel, modelName + tgtExt);
                 }
                 else
@@ -353,6 +366,12 @@ namespace CopyModels.Plugin
             string to) =>
         _resultTable[task.DisplayName].Add(new[] { model, action, $"From: {from}\nTo: {to}" });
 
+        private void AddFailure(
+            ProjectSettings task,
+            string model,
+            string reason) =>
+            _resultTable[task.DisplayName].Add(new[] { model, "FAILED", reason });
+
         internal void ShowResultReport()
         {
             // В будущем - WPF окно. Пока - TaskDialog с кратким итогом.
@@ -361,7 +380,11 @@ namespace CopyModels.Plugin
             {
                 sb.AppendLine($"=== {kv.Key}: ({kv.Value.Count} models) ===");
                 foreach (var row in kv.Value)
+                {
                     sb.AppendLine($" [{row[1]}] {row[0]}");
+                    if (row[1] == "FAILED")
+                        sb.AppendLine($"    {row[2]}");
+                }
             }
             TaskDialog.Show("CopyModels - Report", sb.Length > 0
                                                         ? sb.ToString()
@@ -405,6 +428,18 @@ namespace CopyModels.Plugin
                 uri.MakeRelativeUri(target)
                 .ToString()
                 .Replace('/', '\\'));
+        }
+
+        /// <summary>
+        /// Аналог Path.GetDirectoryName, но безопасный для RSN-псевдо-путей-
+        /// Path.GetDirectoryName схлопывает "//" в "/" и ломает "RSN://server/..."
+        /// </summary>
+        /// <param name="rsnPath"></param>
+        /// <returns></returns>
+        public static string GetRsnDirectoryName(string rsnPath)
+        {
+            var idx = rsnPath.LastIndexOf('/');
+            return idx < 0 ? rsnPath : rsnPath.Substring(0, idx);
         }
     }
 }

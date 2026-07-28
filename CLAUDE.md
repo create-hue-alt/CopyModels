@@ -22,7 +22,8 @@ CopyModels.sln
 - `CopyModelsExecutor` — общий движок обработки моделей, используется обоими входами.
 - `DialogWatchdogService` — UI Automation вотчдог, автоматически закрывает системный
   диалог NWC-экспортера ("No suitable geometry found"), который иначе блокирует
-  headless-прогон намертво.
+  прогон намертво. Подключён и к `CopyModelsCommand` (интерактивный режим),
+  и к `CopyModelsApplication` (headless).
 
 ## Структура JSON конфига
 
