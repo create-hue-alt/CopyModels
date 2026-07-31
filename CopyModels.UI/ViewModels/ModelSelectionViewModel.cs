@@ -8,6 +8,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Media;
 
 namespace CopyModels.UI.ViewModels
 {
@@ -67,11 +68,41 @@ namespace CopyModels.UI.ViewModels
         // ======= МЕТОДЫ ИНИЦИАЛИЗАЦИИ =======
         public void LoadModels(List<ModelSetting> models)
         {
+            var commonDir = GetCommonDirectory(models.Select(m => m.SourcePath));
+            var prefixLen = commonDir.Length > 0 ? commonDir.Length + 1 : 0;
+
             foreach (ModelSetting setting in models)
             {
-                var modelSelection = new ModelSelectionItem(setting);
-                Items.Add(modelSelection);
+                var normalized = setting.SourcePath.Replace('/', '\\');
+                var display = normalized.Length > prefixLen
+                    ? normalized.Substring(prefixLen)
+                    : normalized;
+
+                Items.Add(new ModelSelectionItem(setting, display));            }
+        }
+
+        private static string GetCommonDirectory(IEnumerable<string> path)
+        {
+            var dirSegments = path
+                .Select(p => p.Replace("/", "\\").Split('\\'))
+                .Select(segments => segments.Take(segments.Length - 1).ToArray())
+                .ToList();
+
+            if (dirSegments.Count == 0) return "";
+
+            var minLen = dirSegments.Min(s => s.Length);
+            var common = new List<string>();
+
+            for (int i = 0; i < minLen; i++)
+            {
+                var segment = dirSegments[0][i];
+                if (dirSegments.All(s => string.Equals(s[i], segment, StringComparison.OrdinalIgnoreCase)))
+                    common.Add(segment);
+                else
+                    break;
             }
+
+            return string.Join("\\", common);
         }
 
         /// <summary>

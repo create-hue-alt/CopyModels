@@ -26,7 +26,17 @@
             ItemsSource="{Binding Items}">
             <ListBox.ItemTemplate>
                 <DataTemplate>
-                    <Grid>
+                    <Grid d:DataContext="{d:DesignInstance Type=vm:ModelSelectionItem}" PreviewMouseLeftButtonDown="Row_PreviewMouseLeftButtonDown">
+                        <Grid.Style>
+                            <Style TargetType="Grid">
+                                <Setter Property="Background" Value="Transparent" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsHighlighted}" Value="True">
+                                        <Setter Property="Background" Value="#CCE5FF" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Grid.Style>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="32" />
                             <ColumnDefinition Width="*" />
@@ -36,6 +46,7 @@
                         <CheckBox
                             Grid.Column="0"
                             VerticalAlignment="Center"
+                            Click="CheckBox_Click"
                             IsChecked="{Binding IsSelected}" />
                         <TextBlock
                             Grid.Column="1"

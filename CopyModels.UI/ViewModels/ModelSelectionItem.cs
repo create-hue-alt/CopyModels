@@ -13,16 +13,23 @@ namespace CopyModels.UI.ViewModels
     /// </summary>
     public class ModelSelectionItem : INotifyPropertyChanged
     {
-        public ModelSetting Model {  get; }
+        public ModelSetting Model { get; }
 
         private bool _isSelected;
         public bool IsSelected
         {
             get => _isSelected;
-            set { _isSelected = value; OnPropertyChanged();}
+            set { _isSelected = value; OnPropertyChanged(); }
         }
 
-        public string DisplayName => Model.DisplayName;
+        private bool _isHighlighted;
+        public bool IsHighlighted
+        {
+            get => _isHighlighted;
+            set { _isHighlighted = value; OnPropertyChanged(); }
+        }
+
+        public string DisplayName { get; }
 
         public IEnumerable<BadgeItem> Badges =>
             Model.StatusFlags.Count == 0
@@ -30,13 +37,14 @@ namespace CopyModels.UI.ViewModels
             : Model.StatusFlags.Keys.Select(key =>
                 new BadgeItem(key, key.EndsWith("_is_missed") ? Brushes.Red : Brushes.Orange));
 
-        public ModelSelectionItem(ModelSetting model)
+        public ModelSelectionItem(ModelSetting model, string displayName)
         {
             Model = model;
+            DisplayName = displayName;
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
-        private void OnPropertyChanged([CallerMemberName] string  name = null) =>
+        private void OnPropertyChanged([CallerMemberName] string name = null) =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }
