@@ -24,7 +24,7 @@ namespace CopyModels.Plugin
         private readonly Action<string> _logWarning;
         private readonly Action<string> _logError;
         private readonly Action<string> _logDebug;
-        private Dictionary<string, List<string[]>> _resultTable;
+        private List<ExportResultItem> _results;
 
         internal CopyModelsExecutor(
             FileService fileService,
@@ -41,7 +41,7 @@ namespace CopyModels.Plugin
             _logInfo = logInfo;
             _logWarning = logWarning;
             _logError = logError;
-            _resultTable = new Dictionary<string, List<string[]>>();
+            _results = new List<ExportResultItem>();
             _logDebug = logDebug;
         }
 
@@ -116,8 +116,7 @@ namespace CopyModels.Plugin
         internal void RunTask(ProjectSettings task, List<ModelSetting> models)
         {
             _logInfo($"Project: {task.Project} - {task.DisplayName}");
-            _resultTable[task.DisplayName] = new List<string[]>();
-
+            
             try
             {
                 for (int i = 0; i < models.Count; i++)
@@ -158,13 +157,13 @@ namespace CopyModels.Plugin
                     var archived = _fileService.ArchiveModel(
                                                 model.SourcePath,
                                                 task.BackupFolder);
-                    AddResult(task, modelName, "Archived", model.SourcePath, archived);
+                    AddResult(modelName, archived);
                 }
                 else
                 {
                     _fileService.MarkReadWrite(model.SourcePath);
                     File.Delete(model.SourcePath);
-                    AddResult(task, modelName, "Deleted", model.SourcePath, "");
+                    AddResult(modelName, model.SourcePath);
                 }
                 return true;
             }
@@ -186,7 +185,7 @@ namespace CopyModels.Plugin
                     if (doc == null)
                     {
                         _logError($"Could not open: {model.SourcePath}");
-                        if (reportFailure) AddFailure(task, modelName, "Failed to open the source model");
+                        if (reportFailure) AddFailure(modelName, "Failed to open the source model");
                         return false;
                     }
 
@@ -228,13 +227,7 @@ namespace CopyModels.Plugin
 
                         if (ok)
                         {
-                            AddResult(task,
-                                modelName,
-                                tgtExt == ".RVT"
-                                        ? "Saved RVT"
-                                        : $"Exported {tgtExt}",
-                                model.SourcePath,
-                                targetPath);
+                            AddResult(modelName,targetPath);
 
                             if (task.Transmit.HasValue)
                             {
@@ -249,7 +242,7 @@ namespace CopyModels.Plugin
                         {
                             _logError($"Export failed: {targetPath}");
                             success = false;
-                            if (reportFailure) AddFailure(task, modelName, $"Export/save failed: {targetPath}");
+                            if (reportFailure) AddFailure(modelName, $"Export/save failed: {targetPath}");
                         }
                     }
 
@@ -258,7 +251,7 @@ namespace CopyModels.Plugin
                 {
                     _logError($"Unexpected error processing {modelName} : {ex.Message}\n{ex.StackTrace}");
                     success = false;
-                    if (reportFailure) AddFailure(task, modelName, $"Unexpected error: {ex.Message}");
+                    if (reportFailure) AddFailure(modelName, $"Unexpected error: {ex.Message}");
                 }
                 finally
                 {
@@ -284,7 +277,7 @@ namespace CopyModels.Plugin
 
                     if (ok)
                     {
-                        AddResult(task, modelName, "Copied", model.SourcePath, targetPath);
+                        AddResult(modelName, targetPath);
 
                         if (task.Transmit.HasValue)
                         {
@@ -296,7 +289,7 @@ namespace CopyModels.Plugin
                     else
                     {
                         _logError($"Copy failed: {model.SourcePath} -> {targetPath}");
-                        if (reportFailure) AddFailure(task, modelName, $"Copy failed: {targetPath}");
+                        if (reportFailure) AddFailure(modelName, $"Copy failed: {targetPath}");
                     }
                 }
 
@@ -358,38 +351,13 @@ namespace CopyModels.Plugin
                 ? _rsnService.GetModelDate(p)
                 : _fileService.GetModelDate(p);
 
-        private void AddResult(
-            ProjectSettings task,
-            string model,
-            string action,
-            string from,
-            string to) =>
-        _resultTable[task.DisplayName].Add(new[] { model, action, $"From: {from}\nTo: {to}" });
+        private void AddResult(string model, string path) =>
+        _results.Add(new ExportResultItem(model, success: true, path, errorMessage: null));
 
-        private void AddFailure(
-            ProjectSettings task,
-            string model,
-            string reason) =>
-            _resultTable[task.DisplayName].Add(new[] { model, "FAILED", reason });
-
-        internal void ShowResultReport()
-        {
-            // В будущем - WPF окно. Пока - TaskDialog с кратким итогом.
-            var sb = new System.Text.StringBuilder();
-            foreach (var kv in _resultTable)
-            {
-                sb.AppendLine($"=== {kv.Key}: ({kv.Value.Count} models) ===");
-                foreach (var row in kv.Value)
-                {
-                    sb.AppendLine($" [{row[1]}] {row[0]}");
-                    if (row[1] == "FAILED")
-                        sb.AppendLine($"    {row[2]}");
-                }
-            }
-            TaskDialog.Show("CopyModels - Report", sb.Length > 0
-                                                        ? sb.ToString()
-                                                        : "No operation performed.");
-        }
+        private void AddFailure(string model,string reason) =>
+            _results.Add(new ExportResultItem(model, success:false, path:null, errorMessage: reason));
+               
+        internal List<ExportResultItem> GetResults() => _results;
 
         internal static void WriteLog(StreamWriter writer, string level, string message)
         {

@@ -66,6 +66,8 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="ViewModels\ResultItemViewModel.cs" />
+    <Compile Include="ViewModels\ResultsViewModel.cs" />
     <Compile Include="Windows\ModelSelectionWindow.xaml.cs">
       <DependentUpon>ModelSelectionWindow.xaml</DependentUpon>
     </Compile>
@@ -74,6 +76,9 @@
     </Compile>
     <Compile Include="Windows\ProjectSelectionWindow.xaml.cs">
       <DependentUpon>ProjectSelectionWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Windows\ResultsWindow.xaml.cs">
+      <DependentUpon>ResultsWindow.xaml</DependentUpon>
     </Compile>
   </ItemGroup>
   <ItemGroup>
@@ -115,6 +120,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Windows\ProjectSelectionWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Windows\ResultsWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
