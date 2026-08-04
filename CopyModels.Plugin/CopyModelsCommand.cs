@@ -142,7 +142,11 @@ namespace CopyModels.Plugin
             }
 
             // Вывод результатов
-            executor.ShowResultReport();
+            var resultsWindow = new ResultsWindow();
+            resultsWindow.ViewModel.LoadResults(executor.GetResults());
+            resultsWindow.ViewModel.SetCallbacks(onClose: () => resultsWindow.Close());
+            resultsWindow.ShowDialog();
+
             return Result.Succeeded;
         }
     }

@@ -110,21 +110,19 @@ CopyModels.sln
       сейчас показываются с тем же бейджем "Actual", что и обычные актуальные модели
       (`StatusFlags` не заполняется для `IsExceed`-моделей). Нужен отдельный явный
       бейдж ("To delete"), чтобы не удалить модель по невнимательности
-- [ ] `ModelSelectionWindow`/`ModelSelectionViewModel` — множественный выбор моделей
+- [x] `ModelSelectionWindow`/`ModelSelectionViewModel` — множественный выбор моделей
       через Shift (выделить диапазон кликом с зажатым Shift), сейчас можно отмечать
       только по одной модели за клик (не считая Check/Uncheck/Toggle All)
 - [ ] Чекбокс "Debug log" в `ProjectSelectionWindow` (или отдельно) — переключатель
       debug-логирования внутри интерактивного режима, без переменной окружения
       `COPYMODELS_DEBUG` и перезапуска Revit. Требует доработки WPF-окна и
       прокидывания флага в `CopyModelsExecutor`/`CopyModelsCommand`
-- [ ] Нормальное WPF-окно с итогами вместо `TaskDialog` в `ShowResultReport()` —
-      per-model успехи/ошибки (`AddResult`/`AddFailure`) уже собираются и показываются
-      через `TaskDialog.Show` в конце `CopyModelsCommand.Execute`, но это plain-text
-      отчёт, не полноценное окно (какие модели экспортировались, куда, успех/ошибка).
-      Отдельно всё ещё остаются полностью немые обрывы без всякого сообщения —
-      `allModels.Count == 0` (`CopyModelsCommand.cs:110-111`) и необработанные
-      исключения вне `RunTask` (`CopyModelsExecutor.RunTask` ловит их только логом
-      `Task error [...]`, без UI)
+- [x] `ResultsWindow` вместо `TaskDialog` в `ShowResultReport()` — готово,
+      `ExportResultItem`/`ResultsViewModel`/`ResultsWindow`, подключено в
+      `CopyModelsCommand.cs`. Без группировки по формату (пока нет мультиформатного
+      экспорта за один прогон). Осталось отдельным пунктом: полностью немые обрывы
+      без сообщения — `allModels.Count == 0` (`CopyModelsCommand.cs:110-111`) и
+      необработанные исключения вне `RunTask` (только лог `Task error [...]`, без UI)
 - [ ] Добавить подтверждение выбора задачи чрез ЛКМ в Первом окне. Лгика работы: совместно
       с клавишей "ОК"
 
@@ -180,6 +178,43 @@ CopyModelsApplication — headless точка входа (Task Scheduler, без
 - Следующий шаг: подключить ProgressWindow для индикации выполнения задания;
   отдельно на заметку — подпись DLL сертификатом, чтобы не подтверждать
   "Always Load" после каждой пересборки
+
+ ### Логирование, актуальность моделей, PR #14 (ветка feature/headless-autorun → main)
+- Найдены и исправлены 3 бага логирования: дублирование "Saved: {path}", ложный
+  Relinquish-warning на detached-документах (Document.IsDetached сбрасывается
+  после SaveAsRvt с SaveAsCentral=true — фикс через захват флага при открытии),
+  и главное — RevitServerService.GetModelDate парсил дату RSN в предполагаемом
+  WCF-формате /Date(мс)/, а реальный формат — простая строка "MM/dd/yyyy HH:mm:ss";
+  из-за этого SourceModelDate было null/мусор, и ModelSetting.EvaluateActuality
+  считала все RSN-модели то всегда неактуальными, то всегда актуальными — это была
+  порча бизнес-логики, не только шум в логе. Подтверждено реальным тестом (правка
+  модели на RSN → корректные rvt_not_actual/nwc_not_actual бейджи).
+- Добавлен визуальный разделитель между моделями в логе.
+- Довинчена недоделка с прошлой сессии: DialogWatchdogService подключён и к
+  интерактивному CopyModelsCommand (раньше только в headless), детальный
+  AddFailure/reportFailure для отчёта об ошибках, фикс PathUtiles.GetRsnDirectoryName
+  вместо Path.GetDirectoryName для RSN-путей в BuildModelSettings/BuildTargetPath.
+- CLAUDE.md снят с отслеживания git (добавлен в .gitignore) — локальные инструкции
+  для ассистента, не часть репозитория.
+- Ветка feature/headless-autorun смержена в main через PR #14, ветка удалена.
+- Следующий шаг: model-selection-ux (см. сессию 15), новая ветка от main.
+
+### Сессия 15 — Model selection UX (ветка feature/model-selection-ux)
+- Explorer-style выделение в ModelSelectionWindow: клик по строке выделяет,
+  Shift+клик красит диапазон от последнего обычного клика (якорь), Ctrl+клик
+  добавляет/убирает одну строку. Клик по чекбоксу внутри выделенного диапазона
+  применяет значение ко всем подсвеченным строкам. Модификаторы клавиш сравниваются
+  через побитовое &, не через == (точное сравнение [Flags] enum ненадёжно).
+- ModelSelectionItem.DisplayName обрезает общий префикс папок среди всех
+  загруженных моделей (GetCommonDirectory в ModelSelectionViewModel) — вместо
+  полного серверного пути показывается только "000_COORD\...rvt".
+- Новое окно итогов ResultsWindow заменило TaskDialog в ShowResultReport(): новый
+  типизированный ExportResultItem (Core), ResultsViewModel/ResultItemViewModel,
+  иконки через глифы Segoe MDL2 Assets. Сознательно без группировки по формату —
+  сейчас нет одновременного экспорта в несколько форматов за один прогон.
+- Следующий шаг: коммит текущих изменений; из бэклога — двойной клик ЛКМ в
+  ProjectSelectionWindow, Esc/Cancel на втором окне → назад к первому, бейдж
+  "To delete" для exceed-моделей.
 
 ---
 
